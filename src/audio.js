@@ -240,6 +240,87 @@ export class AudioManager {
     osc.stop(t + 0.5);
   }
 
+  playAlarmSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.linearRampToValueAtTime(1200, t + 0.15);
+    osc.frequency.linearRampToValueAtTime(800, t + 0.3);
+    osc.frequency.linearRampToValueAtTime(1200, t + 0.45);
+    osc.frequency.linearRampToValueAtTime(800, t + 0.6);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1500, t);
+
+    gain.gain.setValueAtTime(0.04, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.75);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.8);
+  }
+
+  playBoosterSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, t);
+    osc.frequency.exponentialRampToValueAtTime(1800, t + 0.35);
+
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.45);
+  }
+
+  playPlatformFadeSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(2000, t);
+    osc.frequency.setValueAtTime(1500, t + 0.05);
+    osc.frequency.setValueAtTime(1000, t + 0.1);
+    osc.frequency.setValueAtTime(600, t + 0.15);
+
+    gain.gain.setValueAtTime(0.05, t);
+    gain.gain.linearRampToValueAtTime(0.05, t + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.22);
+  }
+
   playGameOverSound() {
     this.init();
     this.resume();

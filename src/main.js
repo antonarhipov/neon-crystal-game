@@ -320,11 +320,11 @@ class GameApp {
 
     // Calculate score points for this level
     const timeBonus = Math.floor(this.timeLeft * 10);
-    const sectorScore = 1500 + timeBonus; // 15 crystals collected * 100 points
+    const sectorScore = (this.totalCrystals * 100) + timeBonus;
     this.totalScore += timeBonus;
 
     // Display Stats
-    document.getElementById('lc-crystals').textContent = `15 / 15`;
+    document.getElementById('lc-crystals').textContent = `${this.totalCrystals} / ${this.totalCrystals}`;
     document.getElementById('lc-time-bonus').textContent = `+${timeBonus}`;
     document.getElementById('lc-sector-score').textContent = `+${sectorScore}`;
     document.getElementById('lc-total-score').textContent = Math.floor(this.totalScore);
@@ -332,7 +332,7 @@ class GameApp {
     // Dynamic titles
     document.getElementById('lc-title').textContent = `Sector ${this.currentLevel} Synchronized`;
     
-    if (this.currentLevel < 3) {
+    if (this.currentLevel < 6) {
       this.nextLevelBtn.textContent = 'Enter Next Sector';
     } else {
       this.nextLevelBtn.textContent = 'Finalize Core Grid';
@@ -345,7 +345,7 @@ class GameApp {
   proceedToNextLevel() {
     this.levelclearScreen.classList.add('hidden');
     
-    if (this.currentLevel === 3) {
+    if (this.currentLevel === 6) {
       this.triggerVictory();
       return;
     }
@@ -355,9 +355,20 @@ class GameApp {
 
     // Set level configurations
     if (this.currentLevel === 2) {
+      this.totalCrystals = 14;
       this.gameDuration = 75.0;
     } else if (this.currentLevel === 3) {
+      this.totalCrystals = 15;
       this.gameDuration = 90.0;
+    } else if (this.currentLevel === 4) {
+      this.totalCrystals = 15;
+      this.gameDuration = 85.0;
+    } else if (this.currentLevel === 5) {
+      this.totalCrystals = 14;
+      this.gameDuration = 95.0;
+    } else if (this.currentLevel === 6) {
+      this.totalCrystals = 15;
+      this.gameDuration = 110.0;
     }
 
     this.score = 0;
@@ -370,7 +381,7 @@ class GameApp {
 
     // Reset HUD
     this.scoreCountEl.textContent = '0';
-    this.targetCountEl.textContent = '15';
+    this.targetCountEl.textContent = this.totalCrystals;
     this.timerTextEl.textContent = `${this.gameDuration.toFixed(1)}s`;
     this.timerFillEl.style.width = '100%';
     this.timerFillEl.classList.remove('warning');
@@ -410,6 +421,15 @@ class GameApp {
     } else if (level === 3) {
       this.totalCrystals = 15;
       this.gameDuration = 90.0;
+    } else if (level === 4) {
+      this.totalCrystals = 15;
+      this.gameDuration = 85.0;
+    } else if (level === 5) {
+      this.totalCrystals = 14;
+      this.gameDuration = 95.0;
+    } else if (level === 6) {
+      this.totalCrystals = 15;
+      this.gameDuration = 110.0;
     }
     
     this.targetCountEl.textContent = this.totalCrystals;
@@ -537,6 +557,11 @@ class GameApp {
     
     const closest = new THREE.Vector3().addVectors(a, ab.multiplyScalar(t));
     return p.distanceTo(closest);
+  }
+
+  // Angle difference helper (keeps it in range -PI to PI)
+  angleDifference(a, b) {
+    return Math.atan2(Math.sin(a - b), Math.cos(a - b));
   }
 
   // Draw HUD radar display representing crystals, player, and enemy guards
@@ -792,6 +817,123 @@ class GameApp {
           guard.isAlert = false;
           guard.targetPlayer = null;
           guard.mesh.position.copy(guard.patrolNodes[0]);
+        }
+      }
+
+      // Check fading platform triggers
+      const standing = this.controls.standingPlatform;
+      if (standing && standing.isFadingPlatform && standing.fadeState === 'idle') {
+        standing.fadeState = 'fading';
+        standing.fadeTimer = 1.2;
+        this.audio.playPlatformFadeSound();
+      }
+
+      // Check gravity lifts
+      const lifts = this.world.getGravityLifts();
+      for (const lift of lifts) {
+        const horizontalDist = new THREE.Vector2(playerPos.x, playerPos.z).distanceTo(new THREE.Vector2(lift.position.x, lift.position.z));
+        const verticalCheck = playerPos.y >= lift.position.y && playerPos.y <= lift.position.y + lift.height;
+        if (horizontalDist < lift.radius && verticalCheck) {
+          this.controls.velocity.y = Math.min(11.0, this.controls.velocity.y + delta * 38.0);
+          this.controls.jumpCount = 0;
+        }
+      }
+
+      // Check velocity booster pads
+      if (this.velocityPadCooldown === undefined) this.velocityPadCooldown = 0;
+      if (this.velocityPadCooldown > 0) {
+        this.velocityPadCooldown -= delta;
+      }
+      if (this.velocityPadCooldown <= 0) {
+        const pads = this.world.getVelocityPads();
+        for (const pad of pads) {
+          const horizontalDist = new THREE.Vector2(playerPos.x, playerPos.z).distanceTo(new THREE.Vector2(pad.position.x, pad.position.z));
+          const verticalCheck = Math.abs(playerPos.y - pad.position.y) < 1.8;
+          if (horizontalDist < 2.2 && verticalCheck) {
+            this.velocityPadCooldown = 0.5;
+            this.audio.playBoosterSound();
+            this.showScoreSplash('VELOCITY ACCELERATION');
+            
+            const boostForce = pad.direction.clone().multiplyScalar(pad.force);
+            this.controls.velocity.x = boostForce.x;
+            this.controls.velocity.z = boostForce.z;
+            this.controls.velocity.y = Math.max(this.controls.velocity.y, boostForce.y);
+            
+            this.particles.spawn(pad.position, 0x00ffcc, 15);
+            break;
+          }
+        }
+      }
+
+      // Check security searchlights
+      const searchlights = this.world.getSearchlights();
+      let playerDetectedThisFrame = false;
+      for (const light of searchlights) {
+        const distToSpot = new THREE.Vector2(playerPos.x, playerPos.z).distanceTo(new THREE.Vector2(light.target.x, light.target.z));
+        const verticalCheck = Math.abs(playerPos.y - light.target.y) < 2.5;
+        if (distToSpot < light.radius && verticalCheck) {
+          playerDetectedThisFrame = true;
+          break;
+        }
+      }
+
+      if (playerDetectedThisFrame) {
+        if (!this.world.isAlarmActive) {
+          this.world.isAlarmActive = true;
+          this.audio.playAlarmSound();
+          this.showPenaltySplash('SECURITY SYSTEM COMPROMISED');
+        }
+        this.world.getGuards().forEach(guard => {
+          guard.isAlert = true;
+          guard.targetPlayer = playerPos;
+        });
+        this.alarmTimer = 4.0;
+      } else {
+        if (this.world.isAlarmActive) {
+          if (this.alarmTimer === undefined) this.alarmTimer = 4.0;
+          this.alarmTimer -= delta;
+          if (this.alarmTimer <= 0) {
+            this.world.isAlarmActive = false;
+            this.showScoreSplash('SECURITY THREAT CLEARED');
+            this.world.getGuards().forEach(guard => {
+              guard.isAlert = false;
+              guard.targetPlayer = null;
+            });
+          }
+        }
+      }
+
+      // Check rotating sweepers
+      if (this.sweeperHitCooldown === undefined) this.sweeperHitCooldown = 0;
+      if (this.sweeperHitCooldown > 0) {
+        this.sweeperHitCooldown -= delta;
+      }
+      if (this.sweeperHitCooldown <= 0) {
+        const sweepers = this.world.getSweepers();
+        const playerRadius = this.controls.playerRadius;
+        const playerHeight = this.controls.playerHeight;
+        for (const sw of sweepers) {
+          const horizDist = new THREE.Vector2(playerPos.x, playerPos.z).distanceTo(new THREE.Vector2(sw.center.x, sw.center.z));
+          const inHeight = playerPos.y - playerHeight <= sw.center.y + 0.15 && playerPos.y >= sw.center.y - 0.15;
+          if (horizDist < sw.length && inHeight) {
+            const angleToPlayer = Math.atan2(playerPos.z - sw.center.z, playerPos.x - sw.center.x);
+            const diff1 = Math.abs(this.angleDifference(angleToPlayer, sw.angle));
+            const diff2 = Math.abs(this.angleDifference(angleToPlayer, sw.angle + Math.PI));
+            
+            const sweepThickness = 0.28;
+            if (diff1 < sweepThickness || diff2 < sweepThickness) {
+              this.sweeperHitCooldown = 1.0;
+              this.audio.playLaserHitSound();
+              this.timeLeft = Math.max(0, this.timeLeft - 10.0);
+              this.showPenaltySplash('-10.0s ROTATING SWEEPER CLASH');
+              
+              const push = new THREE.Vector3().subVectors(playerPos, sw.center);
+              push.y = 0.2;
+              push.normalize();
+              this.controls.velocity.addScaledVector(push, 22.0);
+              break;
+            }
+          }
         }
       }
     }

@@ -12,6 +12,12 @@ export class GameWorld {
     this.portals = [];        // Portal pads
     this.guards = [];         // Enemy drones
     
+    this.gravityLifts = [];
+    this.velocityPads = [];
+    this.searchlights = [];
+    this.sweepers = [];
+    this.isAlarmActive = false;
+    
     this.monolithMeshes = []; 
     this.platformSize = 80;   
     
@@ -59,6 +65,30 @@ export class GameWorld {
     this.monolithMeshes.forEach(m => this.scene.remove(m));
     this.monolithMeshes = [];
     this.colliders = [];
+
+    this.gravityLifts.forEach(l => {
+      this.scene.remove(l.mesh);
+      l.innerRings.forEach(r => this.scene.remove(r));
+    });
+    this.gravityLifts = [];
+
+    this.velocityPads.forEach(p => {
+      this.scene.remove(p.mesh);
+      this.scene.remove(p.arrowMesh);
+    });
+    this.velocityPads = [];
+
+    this.searchlights.forEach(s => {
+      this.scene.remove(s.mesh);
+      this.scene.remove(s.lightSpotMesh);
+    });
+    this.searchlights = [];
+
+    this.sweepers.forEach(sw => {
+      this.scene.remove(sw.mesh);
+    });
+    this.sweepers = [];
+    this.isAlarmActive = false;
 
     // Clear guides meshes
     while (this.guidesGroup.children.length > 0) {
@@ -201,6 +231,116 @@ export class GameWorld {
 
       this.spawnCrystalsLevel3();
       this.buildNavigationGuides(3);
+    } else if (levelNumber === 4) {
+      // LEVEL 4: The Kinetic Circuit (Velocity Pads & Gravity Lifts)
+      this.createMonoliths([
+        { x: -30, z: -30, r: 2.5, h: 10 },
+        { x: 30, z: -30, r: 2.5, h: 10 },
+        { x: -30, z: 30, r: 2.5, h: 10 },
+        { x: 30, z: 30, r: 2.5, h: 10 }
+      ]);
+
+      // Platforms
+      this.createPlatform(0, 10, 0, 16, 0.8, 16, 0xffee00);       // Central High Plat
+      this.createPlatform(-18, 6, 8, 8, 0.8, 8, 0x00f0ff);        // Left Plat
+      this.createPlatform(18, 6, 8, 8, 0.8, 8, 0x00f0ff);         // Right Plat
+      this.createPlatform(0, 5, -16, 8, 0.8, 8, 0xff00b4);        // Back Plat
+
+      // Gravity Lifts
+      this.createGravityLift(-18, 0, 8, 2.2, 7.0);                // Lift to Left Plat
+      this.createGravityLift(18, 0, 8, 2.2, 7.0);                 // Lift to Right Plat
+
+      // Velocity Booster Pads
+      this.createVelocityPad(-18, 6.8, 8, 3, 3, 1, 0.25, -0.5, 32);  // Left plat -> Central
+      this.createVelocityPad(18, 6.8, 8, 3, 3, -1, 0.25, -0.5, 32); // Right plat -> Central
+      
+      this.createVelocityPad(0, 0, -26, 3, 3, 0, 0.4, 1, 35);        // Floor pad -> Back Plat
+      this.createVelocityPad(0, 5.8, -16, 3, 3, 0, 0.35, 1, 32);     // Back plat -> Central
+
+      // Lasers
+      this.createLaser(-10, 0, 10, 0, 0, 2.0, 1.8);
+      this.createLaser(0, -10, 0, 10, 0, 2.0, 1.8);
+
+      this.spawnCrystalsLevel4();
+      this.buildNavigationGuides(4);
+
+    } else if (levelNumber === 5) {
+      // LEVEL 5: The Sentinel Keep (Searchlights & portals & guards)
+      this.createMonoliths([
+        { x: -12, z: -12, r: 1.8, h: 20 },
+        { x: 12, z: -12, r: 1.8, h: 20 },
+        { x: -12, z: 12, r: 1.8, h: 20 },
+        { x: 12, z: 12, r: 1.8, h: 20 },
+        { x: 0, z: -32, r: 2.2, h: 15 }
+      ]);
+
+      // Platforms
+      this.createPlatform(-20, 6, -20, 12, 0.8, 12, 0x00f0ff);    // Corner plat 1
+      this.createPlatform(20, 6, -20, 12, 0.8, 12, 0x00f0ff);     // Corner plat 2
+      this.createPlatform(-20, 11, 20, 12, 0.8, 12, 0xff00b4);    // High corner plat 3
+      this.createPlatform(20, 11, 20, 12, 0.8, 12, 0xff00b4);     // High corner plat 4
+      
+      // Portals
+      const p1 = this.createPortal(-20, 6.8, -20, 0xff00b4);
+      const p2 = this.createPortal(20, 11.8, 20, 0xff00b4);
+      p1.targetPortalId = p2.id;
+      p2.targetPortalId = p1.id;
+
+      const p3 = this.createPortal(20, 6.8, -20, 0x00f0ff);
+      const p4 = this.createPortal(-20, 11.8, 20, 0x00f0ff);
+      p3.targetPortalId = p4.id;
+      p4.targetPortalId = p3.id;
+
+      // Timed Moving Platform Gates (rising barriers)
+      this.createPlatform(-12, 0, 0, 1.0, 6.0, 8.0, 0xffee00, {
+        targetX: -12, targetY: 6, targetZ: 0, speed: 0.8
+      });
+      this.createPlatform(12, 0, 0, 1.0, 6.0, 8.0, 0xffee00, {
+        targetX: 12, targetY: 6, targetZ: 0, speed: 0.8
+      });
+
+      // Security Searchlights
+      this.createSearchlight(-20, 24, -10, 8.0, 1.2, 3.2);       // Left
+      this.createSearchlight(20, 24, -10, 8.0, 1.2, 3.2);        // Right
+      this.createSearchlight(0, 24, 18, 9.0, 1.5, 3.6);          // Center
+
+      // Patrol Guards
+      this.createGuard([
+        { x: -28, y: 0, z: -15 },
+        { x: -28, y: 0, z: 15 },
+        { x: -12, y: 0, z: 15 }
+      ], 4.2);
+
+      this.createGuard([
+        { x: 28, y: 0, z: -15 },
+        { x: 28, y: 0, z: 15 },
+        { x: 12, y: 0, z: 15 }
+      ], 4.2);
+
+      this.spawnCrystalsLevel5();
+      this.buildNavigationGuides(5);
+
+    } else if (levelNumber === 6) {
+      // LEVEL 6: The Glitch Void (Fading Platforms & Rotating central sweepers)
+      // Static platforms
+      this.createPlatform(0, 3, 26, 12, 0.8, 12, 0x00f0ff);       // Spawn Static Base
+      this.createPlatform(0, 11, -26, 12, 0.8, 12, 0xffee00);     // Far Static Target
+
+      // Fading platforms
+      this.createPlatform(0, 5, 14, 6, 0.6, 6, 0xff00ff, null, true);   // Fade Platform 1
+      this.createPlatform(-8, 7, 3, 6, 0.6, 6, 0xff00ff, null, true);   // Fade Platform 2 (Left)
+      this.createPlatform(8, 7, 3, 6, 0.6, 6, 0xff00ff, null, true);    // Fade Platform 3 (Right)
+      this.createPlatform(0, 9, -10, 6, 0.6, 6, 0xff00ff, null, true);  // Fade Platform 4
+      
+      // Recovery lift in center
+      this.createGravityLift(0, 0, 0, 3.0, 7.0);
+
+      // Rotating Laser Sweepers
+      this.createSweeper(-15, 0, -3, 11, 2.0);                    // Sweeper Left
+      this.createSweeper(15, 0, -3, 11, -2.0);                    // Sweeper Right
+
+      this.spawnCrystalsLevel6();
+      this.buildNavigationGuides(6);
     }
 
     // Keep guides visibility setting
@@ -283,6 +423,32 @@ export class GameWorld {
       // Guide 4: Floor -> Elevator -> Plat 5
       createDashLine(new THREE.Vector3(0, 0.1, -18), new THREE.Vector3(0, 11.1, -18), 0xffee00);
       createDashLine(new THREE.Vector3(0, 11.1, -18), new THREE.Vector3(0, 11.1, 0), 0xffee00);
+    } else if (levelNumber === 4) {
+      // Gravity column lines
+      createDashLine(new THREE.Vector3(-18, 0.1, 8), new THREE.Vector3(-18, 6.1, 8), 0x00ff66);
+      createDashLine(new THREE.Vector3(18, 0.1, 8), new THREE.Vector3(18, 6.1, 8), 0x00ff66);
+      
+      // Accelerator arcs
+      createArcLine(new THREE.Vector3(-18, 6.8, 8), new THREE.Vector3(0, 10.8, 0), 0x00ffcc);
+      createArcLine(new THREE.Vector3(18, 6.8, 8), new THREE.Vector3(0, 10.8, 0), 0x00ffcc);
+      createArcLine(new THREE.Vector3(0, 0.1, -26), new THREE.Vector3(0, 5.8, -16), 0x00ffcc);
+      createArcLine(new THREE.Vector3(0, 5.8, -16), new THREE.Vector3(0, 10.8, 0), 0x00ffcc);
+    } else if (levelNumber === 5) {
+      // Portal arcs
+      createArcLine(new THREE.Vector3(-20, 6.8, -20), new THREE.Vector3(20, 11.8, 20), 0xff00b4);
+      createArcLine(new THREE.Vector3(20, 6.8, -20), new THREE.Vector3(-20, 11.8, 20), 0x00f0ff);
+      
+      // Gate guides
+      createDashLine(new THREE.Vector3(-12, 0.1, 0), new THREE.Vector3(-12, 6.1, 0), 0xffee00);
+      createDashLine(new THREE.Vector3(12, 0.1, 0), new THREE.Vector3(12, 6.1, 0), 0xffee00);
+    } else if (levelNumber === 6) {
+      // Fading step stones progression
+      createDashLine(new THREE.Vector3(0, 3.8, 26), new THREE.Vector3(0, 5.8, 14), 0xff00ff);
+      createDashLine(new THREE.Vector3(0, 5.8, 14), new THREE.Vector3(-8, 7.8, 3), 0xff00ff);
+      createDashLine(new THREE.Vector3(0, 5.8, 14), new THREE.Vector3(8, 7.8, 3), 0xff00ff);
+      createDashLine(new THREE.Vector3(-8, 7.8, 3), new THREE.Vector3(0, 9.8, -10), 0xff00ff);
+      createDashLine(new THREE.Vector3(8, 7.8, 3), new THREE.Vector3(0, 9.8, -10), 0xff00ff);
+      createDashLine(new THREE.Vector3(0, 9.8, -10), new THREE.Vector3(0, 11.8, -26), 0xff00ff);
     }
   }
 
@@ -452,10 +618,10 @@ export class GameWorld {
   }
 
   // 4. Create floating platforms
-  createPlatform(x, y, z, width, height, depth, color = 0x00f0ff, movingParams = null) {
+  createPlatform(x, y, z, width, height, depth, color = 0x00f0ff, movingParams = null, isFading = false) {
     const geo = new THREE.BoxGeometry(width, height, depth);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x090a10,
+      color: isFading ? 0x1d111d : 0x090a10,
       roughness: 0.25,
       metalness: 0.85,
       transparent: true,
@@ -479,8 +645,21 @@ export class GameWorld {
       maxZ: z + depth / 2,
       y: y + height,
       isMoving: !!movingParams,
-      color
+      color,
+      width,
+      depth,
+      height
     };
+
+    if (isFading) {
+      platform.isFadingPlatform = true;
+      platform.fadeState = 'idle'; // 'idle', 'fading', 'collapsed'
+      platform.fadeTimer = 0.0;
+      platform.regenTimer = 0.0;
+      platform.originalY = platform.y;
+      platform.originalMeshY = mesh.position.y;
+      platform.edgeLines = edgeLines;
+    }
 
     if (movingParams) {
       platform.startPos = new THREE.Vector3(x, y + height / 2, z);
@@ -490,9 +669,6 @@ export class GameWorld {
       platform.t = 0;
       platform.displacement = new THREE.Vector3();
       platform.previousPos = platform.startPos.clone();
-      platform.width = width;
-      platform.depth = depth;
-      platform.height = height;
     }
 
     this.platforms.push(platform);
@@ -890,6 +1066,69 @@ export class GameWorld {
         g.mesh.position.addScaledVector(dir, g.speed * delta);
       }
     });
+
+    // 6. Update Gravity Lift inner rings rising animation
+    this.gravityLifts.forEach(lift => {
+      lift.innerRings.forEach(ring => {
+        ring.position.y += delta * 2.8;
+        if (ring.position.y > lift.endY) {
+          ring.position.y = lift.startY;
+        }
+        const pct = (ring.position.y - lift.startY) / lift.height;
+        ring.material.opacity = Math.sin(pct * Math.PI) * 0.4;
+      });
+    });
+
+    // 7. Update Searchlight sweep rotation
+    this.searchlights.forEach(light => {
+      const isAlarm = this.isAlarmActive;
+      const targetColor = isAlarm ? 0xff0000 : 0xff0055;
+      
+      light.mesh.material.color.setHex(targetColor);
+      light.lightSpotMesh.material.color.setHex(targetColor);
+
+      light.angle += delta * light.speed;
+      light.target.x = light.origin.x + Math.cos(light.angle) * light.sweepRadius;
+      light.target.z = light.origin.z + Math.sin(light.angle) * light.sweepRadius;
+
+      light.lightSpotMesh.position.copy(light.target);
+
+      const dir = new THREE.Vector3().subVectors(light.target, light.origin);
+      light.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.clone().normalize());
+    });
+
+    // 8. Update Sweepers rotation
+    this.sweepers.forEach(sw => {
+      sw.mesh.rotation.y += delta * sw.speed;
+      sw.angle = sw.mesh.rotation.y;
+    });
+
+    // 9. Update Fading Platforms
+    this.platforms.forEach(p => {
+      if (p.isFadingPlatform) {
+        if (p.fadeState === 'fading') {
+          p.fadeTimer -= delta;
+          
+          const blink = Math.sin(time * 30.0) > 0;
+          p.edgeLines.material.color.setHex(blink ? 0xff0055 : 0xff00ff);
+          p.mesh.position.x = (p.minX + p.width/2) + Math.sin(time * 80.0) * 0.05;
+          
+          if (p.fadeTimer <= 0) {
+            p.fadeState = 'collapsed';
+            p.mesh.visible = false;
+            p.regenTimer = 4.0;
+          }
+        } else if (p.fadeState === 'collapsed') {
+          p.regenTimer -= delta;
+          if (p.regenTimer <= 0) {
+            p.fadeState = 'idle';
+            p.mesh.visible = true;
+            p.mesh.position.x = p.minX + p.width / 2;
+            p.edgeLines.material.color.setHex(p.color);
+          }
+        }
+      }
+    });
   }
 
   removeCrystal(crystalId) {
@@ -901,6 +1140,257 @@ export class GameWorld {
     }
   }
 
+  // 10. Core Custom Geometry Builders for Sectors 4-6
+  createGravityLift(x, y, z, radius = 2.5, height = 15) {
+    const geo = new THREE.CylinderGeometry(radius, radius, height, 12, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x00ff66,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const cylinder = new THREE.Mesh(geo, mat);
+    cylinder.position.set(x, y + height / 2, z);
+    this.scene.add(cylinder);
+
+    const ringGeo = new THREE.TorusGeometry(radius, 0.08, 8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00ff66,
+      transparent: true,
+      opacity: 0.8
+    });
+    const bottomRing = new THREE.Mesh(ringGeo, ringMat);
+    bottomRing.rotation.x = Math.PI / 2;
+    bottomRing.position.set(x, y + 0.05, z);
+    this.scene.add(bottomRing);
+
+    const topRing = new THREE.Mesh(ringGeo, ringMat);
+    topRing.rotation.x = Math.PI / 2;
+    topRing.position.set(x, y + height - 0.05, z);
+    this.scene.add(topRing);
+
+    this.monolithMeshes.push(bottomRing);
+    this.monolithMeshes.push(topRing);
+
+    const innerRings = [];
+    const innerRingCount = 3;
+    for (let i = 0; i < innerRingCount; i++) {
+      const ir = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.95, 0.04, 4, 16), ringMat.clone());
+      ir.rotation.x = Math.PI / 2;
+      ir.position.set(x, y + (i / innerRingCount) * height, z);
+      this.scene.add(ir);
+      innerRings.push(ir);
+      this.monolithMeshes.push(ir);
+    }
+
+    this.gravityLifts.push({
+      mesh: cylinder,
+      position: new THREE.Vector3(x, y, z),
+      radius,
+      height,
+      innerRings,
+      startY: y,
+      endY: y + height
+    });
+  }
+
+  createVelocityPad(x, y, z, width = 3, depth = 3, dirX, dirY, dirZ, force = 28) {
+    const padGeo = new THREE.BoxGeometry(width, 0.08, depth);
+    const padMat = new THREE.MeshStandardMaterial({
+      color: 0x07151a,
+      roughness: 0.4,
+      metalness: 0.9
+    });
+    const padMesh = new THREE.Mesh(padGeo, padMat);
+    padMesh.position.set(x, y + 0.04, z);
+    this.scene.add(padMesh);
+
+    const direction = new THREE.Vector3(dirX, dirY, dirZ).normalize();
+    const arrowGeo = new THREE.ConeGeometry(0.4, 1.2, 4);
+    const arrowMat = new THREE.MeshBasicMaterial({
+      color: 0x00ffcc,
+      depthWrite: true
+    });
+    const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+    
+    arrowMesh.position.set(x + direction.x * 0.5, y + 0.15, z + direction.z * 0.5);
+    arrowMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+    this.scene.add(arrowMesh);
+
+    const edges = new THREE.EdgesGeometry(padGeo);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x00ffcc, linewidth: 2 });
+    const edgeLines = new THREE.LineSegments(edges, lineMat);
+    padMesh.add(edgeLines);
+
+    this.velocityPads.push({
+      mesh: padMesh,
+      arrowMesh,
+      position: new THREE.Vector3(x, y, z),
+      direction,
+      force
+    });
+  }
+
+  createSearchlight(x, y, z, sweepRadius = 8, speed = 1.5, radius = 3.5) {
+    const beamLength = y - 0.2;
+    const coneGeo = new THREE.CylinderGeometry(0.1, radius, beamLength, 16, 1, true);
+    coneGeo.translate(0, -beamLength / 2, 0);
+    const coneMat = new THREE.MeshBasicMaterial({
+      color: 0xff0055,
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const beamMesh = new THREE.Mesh(coneGeo, coneMat);
+    beamMesh.position.set(x, y, z);
+    this.scene.add(beamMesh);
+
+    const spotGeo = new THREE.RingGeometry(radius - 0.15, radius, 32);
+    const spotMat = new THREE.MeshBasicMaterial({
+      color: 0xff0055,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending
+    });
+    const spotMesh = new THREE.Mesh(spotGeo, spotMat);
+    spotMesh.rotation.x = Math.PI / 2;
+    spotMesh.position.set(x, 0.05, z);
+    this.scene.add(spotMesh);
+
+    this.searchlights.push({
+      mesh: beamMesh,
+      lightSpotMesh: spotMesh,
+      origin: new THREE.Vector3(x, y, z),
+      target: new THREE.Vector3(x, 0, z),
+      angle: Math.random() * Math.PI * 2,
+      speed,
+      sweepRadius,
+      radius,
+      beamLength
+    });
+  }
+
+  createSweeper(x, y, z, length = 12, speed = 2.0) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+
+    const coreGeo = new THREE.CylinderGeometry(0.4, 0.4, 3, 8);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0x1c212b,
+      metalness: 0.9,
+      roughness: 0.2
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    group.add(coreMesh);
+
+    const armGeo = new THREE.CylinderGeometry(0.1, 0.1, length, 8);
+    armGeo.rotateZ(Math.PI / 2);
+    armGeo.translate(length / 2, 0, 0);
+
+    const armMat = new THREE.MeshBasicMaterial({
+      color: 0xff0033,
+      transparent: true,
+      opacity: 0.8
+    });
+    const armMesh = new THREE.Mesh(armGeo, armMat);
+    armMesh.position.set(0, 0.8, 0);
+    group.add(armMesh);
+
+    const armGeo2 = armGeo.clone().translate(-length, 0, 0);
+    const armMesh2 = new THREE.Mesh(armGeo2, armMat);
+    armMesh2.position.set(0, 0.8, 0);
+    group.add(armMesh2);
+
+    this.scene.add(group);
+
+    this.sweepers.push({
+      mesh: group,
+      armMesh,
+      armMesh2,
+      center: new THREE.Vector3(x, y + 0.8, z),
+      length,
+      angle: 0.0,
+      speed
+    });
+  }
+
+  // 11. Crystal spawning layouts for Sectors 4-6
+  spawnCrystalsLevel4() {
+    const floorPositions = [
+      { x: -28, z: 28 }, { x: 28, z: 28 },
+      { x: -26, z: -26 }, { x: 26, z: -26 }
+    ];
+    floorPositions.forEach((pos, idx) => {
+      this.createCrystalMesh(pos.x, 1.2, pos.z, `crystal_4_f_${idx}`);
+    });
+
+    this.createCrystalMesh(-18, 7.2, 8, 'crystal_4_pLeft_a');
+    this.createCrystalMesh(-16, 7.2, 10, 'crystal_4_pLeft_b');
+    this.createCrystalMesh(-20, 7.2, 6, 'crystal_4_pLeft_c');
+
+    this.createCrystalMesh(18, 7.2, 8, 'crystal_4_pRight_a');
+    this.createCrystalMesh(16, 7.2, 10, 'crystal_4_pRight_b');
+    this.createCrystalMesh(20, 7.2, 6, 'crystal_4_pRight_c');
+
+    this.createCrystalMesh(0, 6.2, -16, 'crystal_4_pBack');
+
+    this.createCrystalMesh(0, 11.2, 0, 'crystal_4_pCenter_a');
+    this.createCrystalMesh(2, 11.2, 2, 'crystal_4_pCenter_b');
+    this.createCrystalMesh(-2, 11.2, -2, 'crystal_4_pCenter_c');
+    this.createCrystalMesh(-2, 11.2, 2, 'crystal_4_pCenter_d');
+    this.createCrystalMesh(2, 11.2, -2, 'crystal_4_pCenter_e');
+  }
+
+  spawnCrystalsLevel5() {
+    const floorPositions = [
+      { x: -30, z: -28 }, { x: 30, z: -28 },
+      { x: -30, z: 28 }, { x: 30, z: 28 },
+      { x: 0, z: -18 }, { x: 0, z: 18 }
+    ];
+    floorPositions.forEach((pos, idx) => {
+      this.createCrystalMesh(pos.x, 1.2, pos.z, `crystal_5_f_${idx}`);
+    });
+
+    this.createCrystalMesh(-20, 7.2, -20, 'crystal_5_p1_a');
+    this.createCrystalMesh(-18, 7.2, -22, 'crystal_5_p1_b');
+
+    this.createCrystalMesh(20, 7.2, -20, 'crystal_5_p2_a');
+    this.createCrystalMesh(18, 7.2, -22, 'crystal_5_p2_b');
+
+    this.createCrystalMesh(-20, 12.2, 20, 'crystal_5_p3_a');
+    this.createCrystalMesh(-22, 12.2, 18, 'crystal_5_p3_b');
+
+    this.createCrystalMesh(20, 12.2, 20, 'crystal_5_p4_a');
+    this.createCrystalMesh(22, 12.2, 18, 'crystal_5_p4_b');
+  }
+
+  spawnCrystalsLevel6() {
+    this.createCrystalMesh(0, 4.2, 26, 'crystal_6_base_a');
+    this.createCrystalMesh(-3, 4.2, 26, 'crystal_6_base_b');
+    this.createCrystalMesh(3, 4.2, 26, 'crystal_6_base_c');
+
+    this.createCrystalMesh(0, 12.2, -26, 'crystal_6_target_a');
+    this.createCrystalMesh(-3, 12.2, -26, 'crystal_6_target_b');
+    this.createCrystalMesh(3, 12.2, -26, 'crystal_6_target_c');
+
+    this.createCrystalMesh(0, 5.0, 20, 'crystal_6_air_1');
+    this.createCrystalMesh(-4, 7.2, 8, 'crystal_6_air_2');
+    this.createCrystalMesh(4, 7.2, 8, 'crystal_6_air_3');
+    this.createCrystalMesh(-4, 9.2, -3, 'crystal_6_air_4');
+    this.createCrystalMesh(4, 9.2, -3, 'crystal_6_air_5');
+    this.createCrystalMesh(0, 11.2, -18, 'crystal_6_air_6');
+
+    this.createCrystalMesh(0, 1.2, 5, 'crystal_6_low_1');
+    this.createCrystalMesh(0, 1.2, -5, 'crystal_6_low_2');
+    this.createCrystalMesh(-5, 1.2, 0, 'crystal_6_low_3');
+  }
+
+  // Collections accessors
   getColliders() {
     return this.colliders;
   }
@@ -923,5 +1413,21 @@ export class GameWorld {
 
   getGuards() {
     return this.guards;
+  }
+
+  getGravityLifts() {
+    return this.gravityLifts;
+  }
+
+  getVelocityPads() {
+    return this.velocityPads;
+  }
+
+  getSearchlights() {
+    return this.searchlights;
+  }
+
+  getSweepers() {
+    return this.sweepers;
   }
 }

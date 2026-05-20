@@ -144,6 +144,9 @@ export class PlayerControls {
 
     // 2. Check Floating Platforms
     for (const platform of platforms) {
+      if (platform.fadeState === 'collapsed') {
+        continue;
+      }
       const pad = 0.2; // Extra bounding box padding
       const inX = this.camera.position.x >= platform.minX - pad && this.camera.position.x <= platform.maxX + pad;
       const inZ = this.camera.position.z >= platform.minZ - pad && this.camera.position.z <= platform.maxZ + pad;
@@ -178,6 +181,8 @@ export class PlayerControls {
       // Actually, we can let canJump be false, since our space trigger checks `this.canJump || this.jumpCount < 2`
       this.canJump = false;
     }
+
+    this.standingPlatform = standingPlatform;
 
     // Collision detection with pillars/monoliths
     // Colliders are passed as an array of objects: { position: THREE.Vector3, radius: number }
