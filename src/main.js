@@ -318,6 +318,13 @@ class GameApp {
     if (ammoEl) ammoEl.textContent = this.ammo;
     this.audio.playLaserShootSound();
 
+    // Trigger crosshair firing recoil visual scale
+    const crosshair = document.getElementById('crosshair');
+    if (crosshair) {
+      crosshair.classList.add('active');
+      setTimeout(() => crosshair.classList.remove('active'), 80);
+    }
+
     // Fire direction from camera world orientation
     const dir = new THREE.Vector3();
     this.camera.getWorldDirection(dir);
@@ -360,12 +367,16 @@ class GameApp {
   damageGuard(guard, index, fireDirection) {
     guard.health--;
     
-    // Impact pushback
+    // Impact pushback & visual squashing juice
     const pushDir = fireDirection.clone();
     pushDir.y = 0;
     pushDir.normalize();
     guard.mesh.position.addScaledVector(pushDir, 1.6);
     
+    // Set squashed scale and bright glowing flash
+    guard.mesh.scale.set(1.4, 0.6, 1.4);
+    guard.coreMesh.material.emissiveIntensity = 6.0;
+
     // Spawn damage sparks
     this.particles.spawn(guard.mesh.position, 0xffaa00, 10);
 
@@ -383,7 +394,7 @@ class GameApp {
     } else {
       this.audio.playGuardDamageSound();
       
-      // Update billboard health bar
+      // Update billboard health bar graphic
       const ratio = Math.max(0, guard.health / guard.maxHealth);
       guard.healthBarFg.scale.x = ratio;
       guard.healthBarFg.position.x = - (1.0 - ratio) * 0.6; // Shift pivot
@@ -392,6 +403,16 @@ class GameApp {
         guard.healthBarFg.material.color.setHex(0xff3300); // Red
       } else if (ratio < 0.65) {
         guard.healthBarFg.material.color.setHex(0xffaa00); // Orange
+      }
+
+      // Update 3D health percentage canvas text texture
+      if (guard.healthTextCanvas && guard.healthTextCtx && guard.healthTextTexture) {
+        const percent = Math.round(ratio * 100);
+        const ctx = guard.healthTextCtx;
+        ctx.clearRect(0, 0, 64, 32);
+        ctx.fillStyle = ratio < 0.35 ? '#ff3300' : (ratio < 0.65 ? '#ffaa00' : '#ffffff');
+        ctx.fillText(percent + '%', 32, 16);
+        guard.healthTextTexture.needsUpdate = true;
       }
     }
   }

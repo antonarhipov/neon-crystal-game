@@ -308,18 +308,18 @@ export class GameWorld {
       this.createSearchlight(20, 24, -10, 8.0, 1.2, 3.2);        // Right
       this.createSearchlight(0, 24, 18, 9.0, 1.5, 3.6);          // Center
 
-      // Patrol Guards (Sector 5: 3 Health)
+      // Patrol Guards (Sector 5: 2 Health)
       this.createGuard([
         { x: -28, y: 0, z: -15 },
         { x: -28, y: 0, z: 15 },
         { x: -12, y: 0, z: 15 }
-      ], 4.2, 3);
+      ], 4.2, 2);
 
       this.createGuard([
         { x: 28, y: 0, z: -15 },
         { x: 28, y: 0, z: 15 },
         { x: 12, y: 0, z: 15 }
-      ], 4.2, 3);
+      ], 4.2, 2);
 
       this.spawnCrystalsLevel5();
       this.buildNavigationGuides(5);
@@ -788,8 +788,8 @@ export class GameWorld {
     });
   }
 
-  // 7. Create AI Guard (now with health parameters and billboarded life bar)
-  createGuard(patrolPoints, speed = 4.0, maxHealth = 3) {
+  // 7. Create AI Guard (now with health parameters and billboarded life bar + % text)
+  createGuard(patrolPoints, speed = 4.0, maxHealth = 2) {
     const group = new THREE.Group();
     group.position.copy(patrolPoints[0]);
     group.position.y += 1.3; // Hover altitude
@@ -834,6 +834,24 @@ export class GameWorld {
     fgMesh.position.z = 0.01; // Avoid z-fighting
     healthBarGroup.add(fgMesh);
 
+    // 3D health percentage canvas label texture
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width = 64;
+    textCanvas.height = 32;
+    const textCtx = textCanvas.getContext('2d');
+    textCtx.font = 'bold 20px "Courier New", monospace';
+    textCtx.fillStyle = '#ffffff';
+    textCtx.textAlign = 'center';
+    textCtx.textBaseline = 'middle';
+    textCtx.fillText('100%', 32, 16);
+
+    const textTexture = new THREE.CanvasTexture(textCanvas);
+    const textMat = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true, side: THREE.DoubleSide });
+    const textGeo = new THREE.PlaneGeometry(0.5, 0.25);
+    const textMesh = new THREE.Mesh(textGeo, textMat);
+    textMesh.position.set(0.95, 0, 0.01);
+    healthBarGroup.add(textMesh);
+
     group.add(healthBarGroup);
 
     this.scene.add(group);
@@ -854,7 +872,10 @@ export class GameWorld {
       health: maxHealth,
       maxHealth: maxHealth,
       healthBarGroup,
-      healthBarFg: fgMesh
+      healthBarFg: fgMesh,
+      healthTextCanvas: textCanvas,
+      healthTextCtx: textCtx,
+      healthTextTexture: textTexture
     });
   }
 
@@ -1180,6 +1201,14 @@ export class GameWorld {
         dir.normalize();
         g.mesh.position.addScaledVector(dir, g.speed * delta);
       }
+
+      // Decay hit flash & recover squashed scale
+      if (g.coreMesh.material.emissiveIntensity > 1.5) {
+        g.coreMesh.material.emissiveIntensity = Math.max(1.5, g.coreMesh.material.emissiveIntensity - 12.0 * delta);
+      }
+      g.mesh.scale.x += (1.0 - g.mesh.scale.x) * 8.0 * delta;
+      g.mesh.scale.y += (1.0 - g.mesh.scale.y) * 8.0 * delta;
+      g.mesh.scale.z += (1.0 - g.mesh.scale.z) * 8.0 * delta;
     });
 
     // 6. Update Gravity Lift inner rings rising animation
