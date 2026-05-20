@@ -389,8 +389,19 @@ class GameApp {
       this.scoreCountEl.textContent = this.score;
       this.showScoreSplash('SENTINEL DESTROYED +500');
 
-      this.scene.remove(guard.mesh);
-      this.world.guards.splice(index, 1);
+      // Update billboard health bar graphic to 0%
+      guard.healthBarFg.scale.x = 0;
+      if (guard.healthTextCanvas && guard.healthTextCtx && guard.healthTextTexture) {
+        const ctx = guard.healthTextCtx;
+        ctx.clearRect(0, 0, 64, 32);
+        ctx.fillStyle = '#ff3300';
+        ctx.fillText('0%', 32, 16);
+        guard.healthTextTexture.needsUpdate = true;
+      }
+
+      // Mark for evaporation animation
+      guard.isEvaporating = true;
+      guard.evaporateTimer = 0.65;
     } else {
       this.audio.playGuardDamageSound();
       
@@ -895,6 +906,7 @@ class GameApp {
         // Check collision against guards
         for (let j = guards.length - 1; j >= 0; j--) {
           const guard = guards[j];
+          if (guard.isEvaporating) continue; // Skip evaporating guards
           const dist = proj.mesh.position.distanceTo(guard.mesh.position);
           if (dist < 1.8) {
             this.damageGuard(guard, j, proj.direction);
@@ -965,6 +977,13 @@ class GameApp {
 
       // Check AI patrol drones chase & attack loops
       for (const guard of guards) {
+        if (guard.isEvaporating) {
+          // Spawn trail of ascending glowing orange sparks
+          if (Math.random() < 0.28) {
+            this.particles.spawn(guard.mesh.position, 0xff7700, 2);
+          }
+          continue;
+        }
         const dist = playerPos.distanceTo(guard.mesh.position);
 
         // Sense range (12 units)

@@ -1169,7 +1169,35 @@ export class GameWorld {
     });
 
     // 5. Update AI Guards patrol logic and chase actions
-    this.guards.forEach(g => {
+    for (let i = this.guards.length - 1; i >= 0; i--) {
+      const g = this.guards[i];
+
+      // Handle evaporation animation sequence
+      if (g.isEvaporating) {
+        g.evaporateTimer -= delta;
+
+        // Spin extremely fast
+        g.mesh.rotation.y += 24.0 * delta;
+
+        // Ascend vertically
+        g.mesh.position.y += 4.5 * delta;
+
+        // Shrink drone mesh scale
+        g.mesh.scale.x = Math.max(0, g.mesh.scale.x - 2.0 * delta);
+        g.mesh.scale.y = Math.max(0, g.mesh.scale.y - 2.0 * delta);
+        g.mesh.scale.z = Math.max(0, g.mesh.scale.z - 2.0 * delta);
+
+        if (g.healthBarGroup) {
+          g.healthBarGroup.scale.copy(g.mesh.scale);
+        }
+
+        if (g.evaporateTimer <= 0) {
+          this.scene.remove(g.mesh);
+          this.guards.splice(i, 1);
+        }
+        continue;
+      }
+
       g.coreMesh.rotation.y += 1.4 * delta;
       g.coreMesh.rotation.x += 0.6 * delta;
 
@@ -1209,7 +1237,7 @@ export class GameWorld {
       g.mesh.scale.x += (1.0 - g.mesh.scale.x) * 8.0 * delta;
       g.mesh.scale.y += (1.0 - g.mesh.scale.y) * 8.0 * delta;
       g.mesh.scale.z += (1.0 - g.mesh.scale.z) * 8.0 * delta;
-    });
+    }
 
     // 6. Update Gravity Lift inner rings rising animation
     this.gravityLifts.forEach(lift => {
