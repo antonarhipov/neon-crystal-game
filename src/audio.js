@@ -280,4 +280,147 @@ export class AudioManager {
     }
     return this.isMuted;
   }
+
+  playLaserHitSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.linearRampToValueAtTime(55, t + 0.35);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, t);
+    filter.frequency.exponentialRampToValueAtTime(100, t + 0.35);
+
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.4);
+  }
+
+  playGuardAlertSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const duration = 0.08;
+    const delays = [0.0, 0.12];
+
+    delays.forEach(delay => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, t + delay);
+      
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.setValueAtTime(0, t + delay);
+      gain.gain.linearRampToValueAtTime(0.12, t + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + delay + duration);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t + delay);
+      osc.stop(t + delay + duration + 0.02);
+    });
+  }
+
+  playGuardHitSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const sub = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, t);
+    osc.frequency.linearRampToValueAtTime(30, t + 0.55);
+
+    sub.type = 'triangle';
+    sub.frequency.setValueAtTime(60, t);
+    sub.frequency.linearRampToValueAtTime(20, t + 0.55);
+
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+
+    osc.connect(gain);
+    sub.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    sub.start(t);
+    osc.stop(t + 0.6);
+    sub.stop(t + 0.6);
+  }
+
+  playPortalWarpSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.45);
+
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.2, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.5);
+  }
+
+  playLevelClearSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+    const delay = 0.07;
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + idx * delay);
+
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.setValueAtTime(0, t + idx * delay);
+      gain.gain.linearRampToValueAtTime(0.15, t + idx * delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + idx * delay + 0.4);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t + idx * delay);
+      osc.stop(t + idx * delay + 0.45);
+    });
+  }
 }
+

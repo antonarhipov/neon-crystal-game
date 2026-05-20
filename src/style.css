@@ -458,3 +458,18 @@ body, html {
     transform: translate(-50%, -200%) scale(0.8);
   }
 }
+
+@keyframes yellow-pulse-glow {
+  from {
+    box-shadow: 0 0 8px rgba(255, 238, 0, 0.4);
+  }
+  to {
+    box-shadow: 0 0 20px rgba(255, 238, 0, 0.8);
+  }
+}
+
+.combo-active {
+  animation: yellow-pulse-glow 0.6s infinite alternate;
+  border-color: rgba(255, 238, 0, 0.5) !important;
+}
+

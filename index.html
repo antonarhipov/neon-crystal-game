@@ -15,12 +15,22 @@
       
       <!-- Top Section -->
       <div class="hud-top">
-        <!-- Score and Progress -->
+        <!-- Score, Level and Progress -->
         <div class="score-panel glass-panel">
-          <div class="score-title">Crystals Collected</div>
-          <div class="score-value">
-            <span id="score-count">0</span>
-            <span class="score-total">/ <span id="target-count">15</span></span>
+          <div style="display: flex; gap: 20px; align-items: center;">
+            <div>
+              <div class="score-title">Crystals</div>
+              <div class="score-value">
+                <span id="score-count">0</span>
+                <span class="score-total">/ <span id="target-count">15</span></span>
+              </div>
+            </div>
+            <div style="border-left: 1px solid rgba(255, 255, 255, 0.15); padding-left: 20px; height: 35px; display: flex; flex-direction: column; justify-content: center;">
+              <div class="score-title">Sector</div>
+              <div class="score-value" style="font-size: 1.5rem; line-height: 1; color: var(--neon-yellow); margin-top: 2px;">
+                <span id="level-display">1</span><span class="score-total">/ 3</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -44,6 +54,17 @@
 
       <!-- Bottom Section -->
       <div class="hud-bottom">
+        <!-- Combo Indicator -->
+        <div id="combo-container" class="timer-container glass-panel hidden" style="padding: 10px 20px; margin-bottom: -5px; border-color: rgba(255, 238, 0, 0.2); box-shadow: 0 0 10px rgba(255, 238, 0, 0.05);">
+          <div class="timer-label" style="color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255, 238, 0, 0.4); margin-bottom: 4px;">
+            <span id="combo-text" style="font-weight: 900; font-size: 1.05rem;">COMBO x2</span>
+            <span style="font-size: 0.7rem; color: rgba(255,255,255,0.45); font-family: sans-serif; text-transform: none; text-shadow: none;">COMBO WINDOW</span>
+          </div>
+          <div class="timer-track" style="height: 6px;">
+            <div id="combo-fill" class="timer-fill" style="background: linear-gradient(90deg, var(--neon-yellow) 0%, #ffbb00 100%); box-shadow: 0 0 8px var(--neon-yellow); width: 100%;"></div>
+          </div>
+        </div>
+
         <!-- Energy Core Timer -->
         <div class="timer-container glass-panel">
           <div class="timer-label">
@@ -149,6 +170,31 @@
         </div>
 
         <button id="play-again-btn" class="cyber-btn btn-cyan">Reset System</button>
+      </div>
+    <!-- 4. Level Clear Screen -->
+    <div id="levelclear-screen" class="screen-overlay hidden">
+      <div class="screen-card glass-panel" style="border: var(--border-neon-cyan); box-shadow: var(--glow-cyan);">
+        <h1 class="cyber-title cyan-glow-text" id="lc-title">Sector Cleared</h1>
+        <p class="screen-desc" id="lc-desc">
+          Energy grids for this sector have been fully synchronized.
+        </p>
+
+        <div class="stats-display">
+          <div class="stat-item">
+            <div class="stat-label">Crystals Collected</div>
+            <div class="stat-val" id="lc-crystals">15 / 15</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Stability Bonus</div>
+            <div class="stat-val" id="lc-time-bonus">+0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Sector Score</div>
+            <div class="stat-val" id="lc-sector-score">+1500</div>
+          </div>
+        </div>
+
+        <button id="next-level-btn" class="cyber-btn btn-cyan">Enter Next Sector</button>
       </div>
     </div>
 

@@ -7,18 +7,29 @@ import { ParticleSystem } from './particles.js';
 
 class GameApp {
   constructor() {
-    this.gameState = 'START'; // START, PLAYING, GAMEOVER, VICTORY
+    this.gameState = 'START'; // START, PLAYING, LEVEL_CLEAR, GAMEOVER, VICTORY
+    this.currentLevel = 1;
     this.totalCrystals = 15;
+    
+    // Scoring and timings
     this.score = 0;
-    this.gameDuration = 60.0; // 60 seconds game timer
+    this.totalScore = 0;
+    this.gameDuration = 60.0; // Level 1 timer
     this.timeLeft = this.gameDuration;
     this.highScore = parseInt(localStorage.getItem('neon_crystal_high_score') || '0', 10);
 
-    // Audio & Particles
+    // Combo system
+    this.comboMultiplier = 1;
+    this.comboTimer = 0.0;
+    this.comboDuration = 3.5;
+
+    // Cooldown timers
+    this.laserHitCooldown = 0;
+    this.portalCooldown = 0;
+
+    // Components
     this.audio = new AudioManager();
     this.particles = null;
-
-    // Timing
     this.timer = new THREE.Timer();
     this.timer.connect(document);
 
@@ -30,15 +41,22 @@ class GameApp {
     this.timerFillEl = document.getElementById('timer-fill');
     this.soundBtnEl = document.getElementById('sound-btn');
     
+    // Combo DOM elements
+    this.comboContainer = document.getElementById('combo-container');
+    this.comboText = document.getElementById('combo-text');
+    this.comboFill = document.getElementById('combo-fill');
+    
     // Screen Overlays
     this.startScreen = document.getElementById('start-screen');
     this.gameoverScreen = document.getElementById('gameover-screen');
     this.victoryScreen = document.getElementById('victory-screen');
+    this.levelclearScreen = document.getElementById('levelclear-screen');
     
     // Action Buttons
     this.startBtn = document.getElementById('start-btn');
     this.restartBtn = document.getElementById('restart-btn');
     this.playAgainBtn = document.getElementById('play-again-btn');
+    this.nextLevelBtn = document.getElementById('next-level-btn');
 
     // Radar Elements
     this.radarCanvas = document.getElementById('radar-canvas');
@@ -56,20 +74,18 @@ class GameApp {
     this.initControls();
     this.bindEvents();
 
-    // Spawn crystals initial state
-    this.world.spawnCrystals(this.totalCrystals);
+    // Load initial Level 1
+    this.world.loadLevel(1);
     this.targetCountEl.textContent = this.totalCrystals;
 
     // Start Rendering
     this.animate();
   }
 
-  // Set up Three.js WebGL rendering pipeline and lightning
+  // Set up Three.js WebGL rendering pipeline and lighting
   initThree() {
-    // 1. Scene
     this.scene = new THREE.Scene();
 
-    // 2. Camera
     this.camera = new THREE.PerspectiveCamera(
       70, 
       window.innerWidth / window.innerHeight, 
@@ -77,7 +93,6 @@ class GameApp {
       1000
     );
 
-    // 3. Renderer
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
@@ -88,12 +103,11 @@ class GameApp {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // 4. Lights
     // Ambient light (low intensity, purple/blue space glow)
     const ambientLight = new THREE.AmbientLight(0x1a1230, 0.65);
     this.scene.add(ambientLight);
 
-    // Directional light (acting as nebula glow)
+    // Directional light (nebula glow)
     const dirLight = new THREE.DirectionalLight(0x00f0ff, 0.45);
     dirLight.position.set(20, 40, 20);
     this.scene.add(dirLight);
@@ -117,11 +131,9 @@ class GameApp {
     this.controls = new PlayerControls(
       this.camera, 
       this.canvas,
-      // Fall off callback
+      // Fall off map callback
       () => {
-        // Warp sound
         this.audio.playRespawnSound();
-        // Deduct time penalty
         this.timeLeft = Math.max(0, this.timeLeft - 10.0);
         this.showPenaltySplash('-10s FALLOUT PENALTY');
       },
@@ -151,6 +163,11 @@ class GameApp {
       this.controls.controls.lock();
     });
 
+    // Next Level transition button
+    this.nextLevelBtn.addEventListener('click', () => {
+      this.proceedToNextLevel();
+    });
+
     // Sound toggle
     this.soundBtnEl.addEventListener('click', () => {
       const isMuted = this.audio.toggleMute();
@@ -159,24 +176,22 @@ class GameApp {
 
     // Handle PointerLock events
     this.controls.controls.addEventListener('lock', () => {
-      // User locks cursor -> start / resume gameplay
       this.startScreen.classList.add('hidden');
       this.gameoverScreen.classList.add('hidden');
       this.victoryScreen.classList.add('hidden');
+      this.levelclearScreen.classList.add('hidden');
       
       this.audio.init();
       this.audio.resume();
       this.audio.startAmbientDrone();
       
-      if (this.gameState === 'START' || this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY') {
+      if (this.gameState === 'START' || this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY' || this.gameState === 'LEVEL_CLEAR') {
         this.gameState = 'PLAYING';
       }
     });
 
     this.controls.controls.addEventListener('unlock', () => {
-      // User escapes / unlocks cursor -> pause screen
       if (this.gameState === 'PLAYING') {
-        // Show pause state in start screen
         this.startBtn.textContent = 'Resume Mission';
         this.startScreen.classList.remove('hidden');
       }
@@ -190,27 +205,52 @@ class GameApp {
     });
   }
 
-  // Reset all game variables back to spawn state
+  // Reset all game variables back to Level 1 spawn state
   resetGame() {
     this.score = 0;
+    this.totalScore = 0;
+    this.currentLevel = 1;
+    this.gameDuration = 60.0;
     this.timeLeft = this.gameDuration;
     this.gameState = 'PLAYING';
     
-    // Spawn new crystal configuration
-    this.world.spawnCrystals(this.totalCrystals);
+    this.world.loadLevel(1);
     this.controls.resetPosition();
 
     // Reset HUD DOM elements
     this.scoreCountEl.textContent = '0';
+    this.targetCountEl.textContent = '15';
     this.timerTextEl.textContent = `${this.gameDuration.toFixed(1)}s`;
     this.timerFillEl.style.width = '100%';
     this.timerFillEl.classList.remove('warning');
+    document.getElementById('level-display').textContent = '1';
 
-    // Reset timer
     this.timer.reset();
+    this.resetCombo();
   }
 
-  // Handle game-over state transitions
+  // Reset combo tracking
+  resetCombo() {
+    this.comboMultiplier = 1;
+    this.comboTimer = 0.0;
+    this.comboContainer.classList.add('hidden');
+    this.comboContainer.classList.remove('combo-active');
+  }
+
+  // Update combo decay bar
+  updateCombo(delta) {
+    if (this.comboTimer > 0) {
+      this.comboTimer -= delta;
+      if (this.comboTimer <= 0) {
+        this.resetCombo();
+      } else {
+        const ratio = this.comboTimer / this.comboDuration;
+        this.comboFill.style.width = `${ratio * 100}%`;
+      }
+    }
+  }
+
+  // Handle game-over state
   triggerGameOver() {
     this.gameState = 'GAMEOVER';
     this.controls.controls.unlock();
@@ -218,10 +258,81 @@ class GameApp {
     this.audio.playGameOverSound();
 
     // Display Stats
-    document.getElementById('go-score').textContent = `${this.score} / ${this.totalCrystals}`;
+    document.getElementById('go-score').textContent = `${Math.floor(this.totalScore)} pts`;
     document.getElementById('go-high-score').textContent = this.highScore;
 
     this.gameoverScreen.classList.remove('hidden');
+  }
+
+  // Handle Level Completion Screen
+  triggerLevelClear() {
+    this.gameState = 'LEVEL_CLEAR';
+    this.controls.controls.unlock();
+    this.audio.stopAmbientDrone();
+    this.audio.playLevelClearSound();
+
+    // Calculate score points for this level
+    const timeBonus = Math.floor(this.timeLeft * 10);
+    const sectorScore = 1500 + timeBonus; // 15 crystals collected * 100 points
+    this.totalScore += timeBonus;
+
+    // Display Stats
+    document.getElementById('lc-crystals').textContent = `15 / 15`;
+    document.getElementById('lc-time-bonus').textContent = `+${timeBonus}`;
+    document.getElementById('lc-sector-score').textContent = `+${sectorScore}`;
+    document.getElementById('lc-total-score').textContent = Math.floor(this.totalScore);
+
+    // Dynamic titles
+    document.getElementById('lc-title').textContent = `Sector ${this.currentLevel} Synchronized`;
+    
+    if (this.currentLevel < 3) {
+      this.nextLevelBtn.textContent = 'Enter Next Sector';
+    } else {
+      this.nextLevelBtn.textContent = 'Finalize Core Grid';
+    }
+
+    this.levelclearScreen.classList.remove('hidden');
+  }
+
+  // Next level loading
+  proceedToNextLevel() {
+    this.levelclearScreen.classList.add('hidden');
+    
+    if (this.currentLevel === 3) {
+      this.triggerVictory();
+      return;
+    }
+
+    this.currentLevel++;
+    document.getElementById('level-display').textContent = this.currentLevel;
+
+    // Set level configurations
+    if (this.currentLevel === 2) {
+      this.gameDuration = 75.0;
+    } else if (this.currentLevel === 3) {
+      this.gameDuration = 90.0;
+    }
+
+    this.score = 0;
+    this.timeLeft = this.gameDuration;
+    this.gameState = 'PLAYING';
+    
+    // Load next level assets
+    this.world.loadLevel(this.currentLevel);
+    this.controls.resetPosition();
+
+    // Reset HUD
+    this.scoreCountEl.textContent = '0';
+    this.targetCountEl.textContent = '15';
+    this.timerTextEl.textContent = `${this.gameDuration.toFixed(1)}s`;
+    this.timerFillEl.style.width = '100%';
+    this.timerFillEl.classList.remove('warning');
+
+    this.timer.reset();
+    this.resetCombo();
+    
+    // Relock mouse to resume playing
+    this.controls.controls.lock();
   }
 
   // Handle victory state transitions
@@ -231,19 +342,17 @@ class GameApp {
     this.audio.stopAmbientDrone();
     this.audio.playVictorySound();
 
-    // Calculate score points (100 pts per crystal, plus 10 pts per remaining second)
-    const timeBonus = Math.floor(this.timeLeft * 10);
-    const finalScore = (this.score * 100) + timeBonus;
+    const finalScore = Math.floor(this.totalScore);
 
-    // Check high score
+    // Save high score
     if (finalScore > this.highScore) {
       this.highScore = finalScore;
       localStorage.setItem('neon_crystal_high_score', finalScore.toString());
     }
 
     // Display Stats
-    document.getElementById('vic-time').textContent = `${this.timeLeft.toFixed(1)}s`;
-    document.getElementById('vic-bonus').textContent = `+${timeBonus}`;
+    document.getElementById('vic-time').textContent = 'GRID SECURED';
+    document.getElementById('vic-bonus').textContent = `3 / 3 Sectors`;
     document.getElementById('vic-score').textContent = finalScore;
 
     this.victoryScreen.classList.remove('hidden');
@@ -251,27 +360,46 @@ class GameApp {
 
   // Collect event trigger
   collectCrystal(crystal) {
-    // Remove mesh from world scene
     this.world.removeCrystal(crystal.id);
     
-    // Play chime sound and spawn visual explosion sparks
     this.audio.playCollectSound();
     this.particles.spawnExplosion(crystal.mesh.position, 0xff00b4);
 
+    // Calculate score points using combo multiplier
+    if (this.comboTimer > 0) {
+      this.comboMultiplier++;
+    } else {
+      this.comboMultiplier = 1;
+    }
+    
+    this.comboTimer = this.comboDuration;
+
+    // Display combo HUD feedback
+    if (this.comboMultiplier > 1) {
+      this.comboText.textContent = `COMBO x${this.comboMultiplier}`;
+      this.comboContainer.classList.remove('hidden');
+      this.comboContainer.classList.add('combo-active');
+      this.showScoreSplash(`+${100 * this.comboMultiplier} (COMBO x${this.comboMultiplier})`);
+    } else {
+      this.comboContainer.classList.add('hidden');
+      this.comboContainer.classList.remove('combo-active');
+      this.showScoreSplash('+100');
+    }
+
     // Update Score
+    const points = 100 * this.comboMultiplier;
     this.score++;
     this.scoreCountEl.textContent = this.score;
 
-    // Pop up floating feedback splash at center screen
-    this.showScoreSplash('+1 Crystal');
+    this.totalScore += points;
 
-    // Win condition check
+    // Check level clear
     if (this.score >= this.totalCrystals) {
-      this.triggerVictory();
+      this.triggerLevelClear();
     }
   }
 
-  // UI visual indicators
+  // UI score splash popup
   showScoreSplash(text) {
     const splash = document.createElement('div');
     splash.className = 'pickup-splash';
@@ -285,6 +413,7 @@ class GameApp {
     }, 850);
   }
 
+  // UI hazard warning popup
   showPenaltySplash(text) {
     const splash = document.createElement('div');
     splash.className = 'penalty-splash';
@@ -300,7 +429,19 @@ class GameApp {
     }, 850);
   }
 
-  // Draw HUD radar display representing remaining crystals and player orientation
+  // Distance helper: Point to line-segment
+  distancePointToSegment(p, a, b) {
+    const ab = new THREE.Vector3().subVectors(b, a);
+    const ap = new THREE.Vector3().subVectors(p, a);
+    
+    let t = ap.dot(ab) / ab.lengthSq();
+    t = Math.max(0, Math.min(1, t)); // Clamp to bounds of segment
+    
+    const closest = new THREE.Vector3().addVectors(a, ab.multiplyScalar(t));
+    return p.distanceTo(closest);
+  }
+
+  // Draw HUD radar display representing crystals, player, and enemy guards
   drawRadar(time) {
     const ctx = this.radarCtx;
     const w = this.radarCanvas.width;
@@ -309,7 +450,7 @@ class GameApp {
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Radar Circular Grids (Neon Cyber look)
+    // 1. Radar Circles
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -345,45 +486,67 @@ class GameApp {
     ctx.stroke();
 
     // 3. Draw crystals relative to player position and look rotation
-    // Calculate player look angle on horizontal XZ plane
     const camDir = new THREE.Vector3();
     this.camera.getWorldDirection(camDir);
     const playerAngle = Math.atan2(camDir.x, camDir.z);
 
     const crystals = this.world.getCrystals();
-    const radarRange = 45; // Max 3D distance that maps to the edge of the radar display
+    const radarRange = 45;
     const radarRadiusPixel = center - 5;
 
     crystals.forEach((c) => {
-      // Relative vector
       const rx = c.basePosition.x - this.camera.position.x;
       const rz = c.basePosition.z - this.camera.position.z;
       const distance = Math.sqrt(rx * rx + rz * rz);
 
-      // Rotate coordinates so player is looking UP (negative Z is forward)
-      // This maps player's forward vector to the top of the radar screen
       const rotatedX = rx * Math.cos(-playerAngle) - rz * Math.sin(-playerAngle);
       const rotatedZ = rx * Math.sin(-playerAngle) + rz * Math.cos(-playerAngle);
 
       if (distance < radarRange) {
-        // Map to pixels
         const scale = radarRadiusPixel / radarRange;
         const px = center + rotatedX * scale;
-        // In radar coords, negative rotatedZ represents "forward" (UP)
         const py = center + rotatedZ * scale;
 
-        // Draw crystal dot with radial neon glow
         ctx.fillStyle = '#ff00b4';
         ctx.shadowColor = '#ff00b4';
         ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.arc(px, py, 3.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0; // Reset
+        ctx.shadowBlur = 0;
       }
     });
 
-    // 4. Draw Player Triangle pointer in the exact center (pointing UP)
+    // 4. Draw AI Patrol Guards (represented as glowing red-orange diamonds)
+    const guards = this.world.getGuards();
+    guards.forEach((g) => {
+      const rx = g.mesh.position.x - this.camera.position.x;
+      const rz = g.mesh.position.z - this.camera.position.z;
+      const distance = Math.sqrt(rx * rx + rz * rz);
+
+      const rotatedX = rx * Math.cos(-playerAngle) - rz * Math.sin(-playerAngle);
+      const rotatedZ = rx * Math.sin(-playerAngle) + rz * Math.cos(-playerAngle);
+
+      if (distance < radarRange) {
+        const scale = radarRadiusPixel / radarRange;
+        const px = center + rotatedX * scale;
+        const py = center + rotatedZ * scale;
+
+        ctx.fillStyle = g.isAlert ? '#ffbb00' : '#ff2200';
+        ctx.shadowColor = g.isAlert ? '#ffbb00' : '#ff2200';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 4.5);
+        ctx.lineTo(px + 4.5, py);
+        ctx.lineTo(px, py + 4.5);
+        ctx.lineTo(px - 4.5, py);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    });
+
+    // 5. Draw Player Triangle in Center
     ctx.fillStyle = '#00f0ff';
     ctx.shadowColor = '#00f0ff';
     ctx.shadowBlur = 8;
@@ -393,7 +556,7 @@ class GameApp {
     ctx.lineTo(center + 5, center + 4);
     ctx.closePath();
     ctx.fill();
-    ctx.shadowBlur = 0; // Reset
+    ctx.shadowBlur = 0;
   }
 
   // Core update animation loop
@@ -412,7 +575,6 @@ class GameApp {
       const ratio = this.timeLeft / this.gameDuration;
       this.timerFillEl.style.width = `${ratio * 100}%`;
 
-      // Warning animations under 15 seconds remaining
       if (this.timeLeft <= 15.0) {
         this.timerFillEl.classList.add('warning');
       } else {
@@ -423,30 +585,125 @@ class GameApp {
         this.triggerGameOver();
       }
 
-      // 1. Update Player Movement (physics & static pillar bounds check)
-      this.controls.update(delta, this.world.getColliders());
+      // Update player movement (with colliders and floating/moving platforms list)
+      this.controls.update(delta, this.world.getColliders(), this.world.getPlatforms());
 
-      // 2. Collision checking between player camera and crystals
+      // Update combo decay bar
+      this.updateCombo(delta);
+
+      // Check collision: Player camera to crystals
       const crystals = this.world.getCrystals();
       const playerPos = this.camera.position;
       const collectThreshold = 1.6;
 
       for (let i = crystals.length - 1; i >= 0; i--) {
         const c = crystals[i];
-        // 3D distance between player sphere center and crystal center
         const dist = playerPos.distanceTo(c.mesh.position);
         if (dist < collectThreshold) {
           this.collectCrystal(c);
         }
       }
+
+      // Check collision: Player to cyclic lasers
+      const lasers = this.world.getLasers();
+      const playerRadius = this.controls.playerRadius;
+      const playerHeight = this.controls.playerHeight;
+
+      if (this.laserHitCooldown > 0) {
+        this.laserHitCooldown -= delta;
+      }
+
+      if (this.laserHitCooldown <= 0) {
+        for (const laser of lasers) {
+          if (laser.isActive) {
+            const d = this.distancePointToSegment(playerPos, laser.p1, laser.p2);
+            const inHeight = playerPos.y - playerHeight <= laser.p1.y + 0.1 && playerPos.y >= laser.p1.y - 0.8;
+
+            if (d < playerRadius + 0.15 && inHeight) {
+              this.laserHitCooldown = 1.2; // 1.2s immune cooldown
+              this.audio.playLaserHitSound();
+              this.timeLeft = Math.max(0, this.timeLeft - 5.0);
+              this.showPenaltySplash('-5.0s LASER GRID IMPACT');
+              break;
+            }
+          }
+        }
+      }
+
+      // Check collision: Player to teleporter pads
+      const portals = this.world.getPortals();
+      if (this.portalCooldown > 0) {
+        this.portalCooldown -= delta;
+      }
+
+      if (this.portalCooldown <= 0) {
+        for (const portal of portals) {
+          const dist = playerPos.distanceTo(portal.position);
+          if (dist < 1.4) {
+            const targetPortal = portals.find(p => p.id === portal.targetPortalId);
+            if (targetPortal) {
+              // Teleport player
+              this.camera.position.copy(targetPortal.position);
+              this.camera.position.y += 0.5; // Landing clearance height
+              
+              // Clear velocities to avoid sliding off
+              this.controls.velocity.set(0, 0, 0);
+
+              this.audio.playPortalWarpSound();
+              this.portalCooldown = 1.6; // Cooldown to prevent instant loops
+              this.showScoreSplash('SECTOR SHIFT WARP');
+              break;
+            }
+          }
+        }
+      }
+
+      // Check AI patrol drones chase & attack loops
+      const guards = this.world.getGuards();
+      for (const guard of guards) {
+        const dist = playerPos.distanceTo(guard.mesh.position);
+
+        // Sense range (12 units)
+        if (dist < 12.0) {
+          if (!guard.isAlert) {
+            guard.isAlert = true;
+            this.audio.playGuardAlertSound();
+            this.showPenaltySplash('DRONE THREAT DETECTED');
+          }
+          guard.targetPlayer = playerPos;
+        } else if (dist > 18.0) {
+          if (guard.isAlert) {
+            guard.isAlert = false;
+            guard.targetPlayer = null;
+          }
+        }
+
+        // Damage trigger range (1.8 units)
+        if (dist < 1.8) {
+          this.audio.playGuardHitSound();
+          this.timeLeft = Math.max(0, this.timeLeft - 15.0);
+          this.showPenaltySplash('-15.0s CORE DISCHARGE');
+
+          // Vector pushback
+          const pushBack = new THREE.Vector3().subVectors(playerPos, guard.mesh.position);
+          pushBack.y = 0;
+          pushBack.normalize();
+          this.controls.velocity.addScaledVector(pushBack, 18.0); // Bounce off
+
+          // Reset drone positions back to patrol start node
+          guard.isAlert = false;
+          guard.targetPlayer = null;
+          guard.mesh.position.copy(guard.patrolNodes[0]);
+        }
+      }
     }
 
-    // 3. Update active components animations (still animate stars/crystals/particles when paused)
-    this.world.update(time);
+    // Update level assets
+    this.world.update(time, delta);
     this.particles.update(delta);
     this.drawRadar(time);
 
-    // 4. Render Scene
+    // Render WebGL
     this.renderer.render(this.scene, this.camera);
   }
 }

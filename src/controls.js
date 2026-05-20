@@ -93,7 +93,7 @@ export class PlayerControls {
     }
   }
 
-  update(delta, colliders = []) {
+  update(delta, colliders = [], platforms = []) {
     if (!this.controls.isLocked) return;
 
     // Apply friction (damping)
@@ -123,18 +123,53 @@ export class PlayerControls {
     // Apply vertical movement
     this.camera.position.y += this.velocity.y * delta;
 
-    // Simple height check (collision with floor grid)
-    // The main grid floor is at y = 0
-    // If we are within the floor bounds, collides at y = playerHeight.
-    // Let's assume the floor platform is a square of 80x80 (from -40 to 40)
-    const isPlayerOnFloor = Math.abs(this.camera.position.x) <= 40 && Math.abs(this.camera.position.z) <= 40;
+    // Multi-height platforms and moving platforms checking
+    let grounded = false;
+    let groundY = -9999;
+    let standingPlatform = null;
 
+    // 1. Check Floor Grid (80x80 area at y = 0)
+    const isPlayerOnFloor = Math.abs(this.camera.position.x) <= 40 && Math.abs(this.camera.position.z) <= 40;
     if (isPlayerOnFloor) {
-      if (this.camera.position.y < this.playerHeight) {
-        this.velocity.y = 0;
-        this.camera.position.y = this.playerHeight;
-        this.canJump = true;
+      groundY = 0;
+      // Allow landing if falling or very close to surface
+      if (this.camera.position.y <= this.playerHeight + 0.1 && this.camera.position.y >= this.playerHeight - 1.2 && this.velocity.y <= 0.01) {
+        grounded = true;
       }
+    }
+
+    // 2. Check Floating Platforms
+    for (const platform of platforms) {
+      const pad = 0.2; // Extra bounding box padding
+      const inX = this.camera.position.x >= platform.minX - pad && this.camera.position.x <= platform.maxX + pad;
+      const inZ = this.camera.position.z >= platform.minZ - pad && this.camera.position.z <= platform.maxZ + pad;
+
+      if (inX && inZ) {
+        const targetY = platform.y + this.playerHeight;
+        if (this.camera.position.y <= targetY + 0.1 && this.camera.position.y >= targetY - 1.2 && this.velocity.y <= 0.01) {
+          // Select highest platform if overlapping
+          if (platform.y > groundY) {
+            groundY = platform.y;
+            grounded = true;
+            standingPlatform = platform;
+          }
+        }
+      }
+    }
+
+    if (grounded) {
+      this.velocity.y = 0;
+      this.camera.position.y = groundY + this.playerHeight;
+      this.canJump = true;
+
+      // Sync position with moving platforms
+      if (standingPlatform && standingPlatform.displacement) {
+        this.camera.position.x += standingPlatform.displacement.x;
+        this.camera.position.y += standingPlatform.displacement.y;
+        this.camera.position.z += standingPlatform.displacement.z;
+      }
+    } else {
+      this.canJump = false;
     }
 
     // Collision detection with pillars/monoliths
