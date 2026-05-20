@@ -138,8 +138,15 @@ class GameApp {
         this.showPenaltySplash('-10s FALLOUT PENALTY');
       },
       // Jump callback
-      () => {
-        this.audio.playJumpSound();
+      (isDoubleJump) => {
+        if (isDoubleJump) {
+          this.audio.playDoubleJumpSound();
+          const feetPos = this.camera.position.clone();
+          feetPos.y -= 1.6;
+          this.particles.spawn(feetPos, 0x00f0ff, 20);
+        } else {
+          this.audio.playJumpSound();
+        }
       }
     );
   }
@@ -194,6 +201,16 @@ class GameApp {
       if (this.gameState === 'PLAYING') {
         this.startBtn.textContent = 'Resume Mission';
         this.startScreen.classList.remove('hidden');
+      }
+    });
+
+    // Toggle holographic path guide using 'H' key
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyH' && this.gameState === 'PLAYING') {
+        const nextVisible = !this.world.guidesVisible;
+        this.world.toggleNavigationGuides(nextVisible);
+        this.showPenaltySplash(nextVisible ? 'HOLOGRAPHIC GUIDES ON' : 'HOLOGRAPHIC GUIDES OFF');
+        this.audio.playGuideToggleSound();
       }
     });
 

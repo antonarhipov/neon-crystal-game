@@ -5,19 +5,24 @@ export class GameWorld {
     this.scene = scene;
     
     // Collections
-    this.colliders = [];      // Tall monolith columns: { position: Vector3, radius: number }
-    this.crystals = [];       // Collector targets: { id, mesh, coreMesh, hullMesh, basePosition, bobOffset, isAttachedPlatform }
-    this.platforms = [];      // Floating boxes: { minX, maxX, minZ, maxZ, y, isMoving, mesh, startPos, endPos, speed, direction, t, displacement, previousPos, width, depth, height }
-    this.lasers = [];         // Cyclic lasers: { mesh, posts[], isActive, timer, activeTime, inactiveTime, p1, p2, length, beamMat }
-    this.portals = [];        // Portal pads: { id, mesh, position: Vector3, targetPortalId, color }
-    this.guards = [];         // Enemy drones: { mesh, coreMesh, outerMesh, patrolNodes[], currentNodeIdx, isAlert, targetPlayer, speed, patrolSpeed, chaseSpeed }
+    this.colliders = [];      // Tall monolith columns
+    this.crystals = [];       // Collector targets
+    this.platforms = [];      // Floating boxes
+    this.lasers = [];         // Cyclic lasers
+    this.portals = [];        // Portal pads
+    this.guards = [];         // Enemy drones
     
-    this.monolithMeshes = []; // Keep track of monolith meshes for cleanup
-    this.platformSize = 80;   // Main bottom arena grid floor
+    this.monolithMeshes = []; 
+    this.platformSize = 80;   
     
-    // Core structural assets (kept between level loads)
+    // Core structural assets
     this.skyboxBuilt = false;
     this.floorBuilt = false;
+
+    // Holographic Guides Overlay Group
+    this.guidesGroup = new THREE.Group();
+    this.scene.add(this.guidesGroup);
+    this.guidesVisible = false; // Off by default
   }
 
   build() {
@@ -54,6 +59,18 @@ export class GameWorld {
     this.monolithMeshes.forEach(m => this.scene.remove(m));
     this.monolithMeshes = [];
     this.colliders = [];
+
+    // Clear guides meshes
+    while (this.guidesGroup.children.length > 0) {
+      const child = this.guidesGroup.children[0];
+      this.guidesGroup.remove(child);
+    }
+  }
+
+  // Toggle visibility of navigation guides
+  toggleNavigationGuides(visible) {
+    this.guidesVisible = visible;
+    this.guidesGroup.visible = visible;
   }
 
   // Load level layouts (1, 2, or 3)
@@ -75,7 +92,7 @@ export class GameWorld {
       this.spawnCrystalsLevel1(15);
 
     } else if (levelNumber === 2) {
-      // LEVEL 2: Adds vertical floating platforms, moving platforms, and cyclic lasers
+      // LEVEL 2: Calibrated layout. Platforms slightly closer to avoid dead jumps.
       this.createMonoliths([
         { x: -22, z: -22, r: 2.0, h: 12 },
         { x: 22, z: -22, r: 2.0, h: 12 },
@@ -84,86 +101,85 @@ export class GameWorld {
       ]);
 
       // Static Floating Platforms
-      // format: createPlatform(x, y, z, w, h, d, borderNeonColor, movingParams)
-      this.createPlatform(0, 4, 15, 14, 0.8, 14, 0x00f0ff);      // Platform A
-      this.createPlatform(-18, 8, 0, 12, 0.8, 12, 0xff00b4);     // Platform B
-      this.createPlatform(18, 8, 0, 12, 0.8, 12, 0xff00b4);      // Platform C
-      this.createPlatform(0, 12, -15, 14, 0.8, 14, 0x00f0ff);    // Platform D (high)
+      // Format: createPlatform(x, y, z, w, h, d, borderNeonColor, movingParams)
+      this.createPlatform(0, 4, 14, 14, 0.8, 14, 0x00f0ff);      // Platform A (Medium center front)
+      this.createPlatform(-15, 8, 0, 11, 0.8, 11, 0xff00b4);     // Platform B (Left mid)
+      this.createPlatform(15, 8, 0, 11, 0.8, 11, 0xff00b4);      // Platform C (Right mid)
+      this.createPlatform(0, 11, -14, 14, 0.8, 14, 0x00f0ff);    // Platform D (High center back)
 
-      // Moving Platforms (vertical and horizontal transit nodes)
-      // Moving Plat 1: Vertically between y=0 and y=4 at (x=-10, z=15)
-      this.createPlatform(-10, 0, 15, 6, 0.4, 6, 0xffee00, {
-        targetX: -10, targetY: 4, targetZ: 15, speed: 1.5
+      // Moving Platforms
+      // Moving Plat 1: Vertically between y=0 and y=4 at (x=-8, z=14)
+      this.createPlatform(-8, 0, 14, 6, 0.4, 6, 0xffee00, {
+        targetX: -8, targetY: 4, targetZ: 14, speed: 1.5
       });
-      // Moving Plat 2: Horizontally at height y=8 between Platform B and Platform D
-      this.createPlatform(-10, 8, -7.5, 6, 0.4, 6, 0xffee00, {
-        targetX: -10, targetY: 8, targetZ: -15, speed: 1.2
+      // Moving Plat 2: Diagonal/Horizontal at y=8 between Plat B and D
+      this.createPlatform(-12, 8, -6, 6, 0.4, 6, 0xffee00, {
+        targetX: -5, targetY: 9.5, targetZ: -12, speed: 1.2
       });
-      // Moving Plat 3: Vertically between y=4 and y=12 at (x=10, z=-15)
-      this.createPlatform(10, 4, -15, 6, 0.4, 6, 0xffee00, {
-        targetX: 10, targetY: 12, targetZ: -15, speed: 1.6
+      // Moving Plat 3: Vertically between y=4 and y=11 at (x=8, z=-14)
+      this.createPlatform(8, 4, -14, 6, 0.4, 6, 0xffee00, {
+        targetX: 8, targetY: 11, targetZ: -14, speed: 1.6
       });
 
       // Cyclic lasers (crossing barriers on floor)
-      // format: createLaser(x1, z1, x2, z2, groundY, activeT, inactiveT)
       this.createLaser(-25, 0, -5, 0, 0, 2.2, 1.8);
       this.createLaser(5, 0, 25, 0, 0, 2.2, 1.8);
       this.createLaser(0, -25, 0, -5, 0, 2.5, 1.5);
       this.createLaser(0, 5, 0, 25, 0, 2.5, 1.5);
 
       this.spawnCrystalsLevel2();
+      this.buildNavigationGuides(2);
 
     } else if (levelNumber === 3) {
-      // LEVEL 3: Guards, Portal Pads, Lasers, Moving Platforms
+      // LEVEL 3: Calibrated Corner Platforms & Portal Routes
       this.createMonoliths([
         { x: -25, z: -25, r: 2.2, h: 10 },
         { x: 25, z: 25, r: 2.2, h: 10 }
       ]);
 
       // Static Platforms
-      this.createPlatform(-20, 4, -20, 12, 0.8, 12, 0x00f0ff);   // Plat 1 (Low corner)
-      this.createPlatform(20, 4, -20, 12, 0.8, 12, 0x00f0ff);    // Plat 2 (Low corner)
-      this.createPlatform(-20, 8, 20, 12, 0.8, 12, 0xff00b4);    // Plat 3 (Mid corner)
-      this.createPlatform(20, 8, 20, 12, 0.8, 12, 0xff00b4);     // Plat 4 (Mid corner)
-      this.createPlatform(0, 12, 0, 15, 0.8, 15, 0xffee00);      // Plat 5 (Central High)
+      this.createPlatform(-16, 4, -16, 11, 0.8, 11, 0x00f0ff);   // Plat 1 (Low corner)
+      this.createPlatform(16, 4, -16, 11, 0.8, 11, 0x00f0ff);    // Plat 2 (Low corner)
+      this.createPlatform(-16, 8, 16, 11, 0.8, 11, 0xff00b4);    // Plat 3 (Mid corner)
+      this.createPlatform(16, 8, 16, 11, 0.8, 11, 0xff00b4);     // Plat 4 (Mid corner)
+      this.createPlatform(0, 11, 0, 15, 0.8, 15, 0xffee00);      // Plat 5 (Central High)
 
       // Moving Platforms
-      // Vertical lifter for center Plat 5
+      // Vertical elevator to Plat 5
       this.createPlatform(0, 0, -18, 6, 0.4, 6, 0xffee00, {
-        targetX: 0, targetY: 12, targetZ: -18, speed: 1.5
+        targetX: 0, targetY: 11, targetZ: -18, speed: 1.5
       });
       // Horizontal connector at y=8
-      this.createPlatform(0, 8, 20, 6, 0.4, 6, 0x00f0ff, {
-        targetX: 0, targetY: 8, targetZ: 5, speed: 1.8
+      this.createPlatform(0, 8, 16, 6, 0.4, 6, 0x00f0ff, {
+        targetX: 0, targetY: 8, targetZ: 7, speed: 1.8
       });
 
       // Teleporters (Portal Pads pairs)
-      // Portal Pair A (Magenta): Links Plat 1 (low) and Plat 4 (mid)
-      const pa1 = this.createPortal(-20, 4.8, -20, 0xff00b4);
-      const pa2 = this.createPortal(20, 8.8, 20, 0xff00b4);
+      // Portal Pair A (Magenta)
+      const pa1 = this.createPortal(-16, 4.8, -16, 0xff00b4);
+      const pa2 = this.createPortal(16, 8.8, 16, 0xff00b4);
       pa1.targetPortalId = pa2.id;
       pa2.targetPortalId = pa1.id;
 
-      // Portal Pair B (Cyan): Links Plat 2 (low) and Plat 3 (mid)
-      const pb1 = this.createPortal(20, 4.8, -20, 0x00f0ff);
-      const pb2 = this.createPortal(-20, 8.8, 20, 0x00f0ff);
+      // Portal Pair B (Cyan)
+      const pb1 = this.createPortal(16, 4.8, -16, 0x00f0ff);
+      const pb2 = this.createPortal(-16, 8.8, 16, 0x00f0ff);
       pb1.targetPortalId = pb2.id;
       pb2.targetPortalId = pb1.id;
 
-      // Portal Pair C (Yellow): Links Floor corner and Central high platform
-      const pc1 = this.createPortal(0, 0.02, 28, 0xffee00);
-      const pc2 = this.createPortal(0, 12.8, 0, 0xffee00);
+      // Portal Pair C (Yellow)
+      const pc1 = this.createPortal(0, 0.02, 24, 0xffee00);
+      const pc2 = this.createPortal(0, 11.8, 0, 0xffee00);
       pc1.targetPortalId = pc2.id;
       pc2.targetPortalId = pc1.id;
 
-      // Lasers (1 on central high platform, 2 on low platforms, 1 on floor)
-      this.createLaser(-24, -20, -16, -20, 4.0, 2.0, 2.0); // Blocks Plat 1
-      this.createLaser(16, -20, 24, -20, 4.0, 2.0, 2.0);  // Blocks Plat 2
-      this.createLaser(-5, 0, 5, 0, 12.0, 1.8, 1.8);       // Sweeps across central Plat 5
+      // Lasers
+      this.createLaser(-21, -16, -11, -16, 4.0, 2.0, 2.0); // Blocks Plat 1
+      this.createLaser(11, -16, 21, -16, 4.0, 2.0, 2.0);  // Blocks Plat 2
+      this.createLaser(-5, 0, 5, 0, 11.0, 1.8, 1.8);       // Sweeps Plat 5
       this.createLaser(-10, 0, 10, 0, 0, 2.2, 1.5);        // Floor lane obstacle
 
       // AI Patrol Guards
-      // Guard 1: Floor rectangle patrol
       this.createGuard([
         { x: -16, y: 0, z: -16 },
         { x: -16, y: 0, z: 16 },
@@ -171,21 +187,102 @@ export class GameWorld {
         { x: 16, y: 0, z: -16 }
       ], 4.5);
 
-      // Guard 2: High platform (Plat 5) perimeter patrol
       this.createGuard([
-        { x: -5, y: 12, z: -5 },
-        { x: 5, y: 12, z: -5 },
-        { x: 5, y: 12, z: 5 },
-        { x: -5, y: 12, z: 5 }
+        { x: -5, y: 11, z: -5 },
+        { x: 5, y: 11, z: -5 },
+        { x: 5, y: 11, z: 5 },
+        { x: -5, y: 11, z: 5 }
       ], 3.8);
 
-      // Guard 3: Floor back row patrol
       this.createGuard([
         { x: -28, y: 0, z: -25 },
         { x: 28, y: 0, z: -25 }
       ], 5.5);
 
       this.spawnCrystalsLevel3();
+      this.buildNavigationGuides(3);
+    }
+
+    // Keep guides visibility setting
+    this.guidesGroup.visible = this.guidesVisible;
+  }
+
+  // Create Holographic visual path connector lines
+  buildNavigationGuides(levelNumber) {
+    const createDashLine = (p1, p2, color) => {
+      const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+      const mat = new THREE.LineDashedMaterial({
+        color: color,
+        dashSize: 0.8,
+        gapSize: 0.5,
+        transparent: true,
+        opacity: 0.65
+      });
+      const line = new THREE.Line(geo, mat);
+      line.computeLineDistances(); // Required for dashed lines
+      this.guidesGroup.add(line);
+    };
+
+    const createArcLine = (p1, p2, color) => {
+      const points = [];
+      const segments = 24;
+      const height = 6.0;
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const pt = new THREE.Vector3().lerpVectors(p1, p2, t);
+        // Elevate mid section like a parabola
+        pt.y += Math.sin(t * Math.PI) * height;
+        points.push(pt);
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      const mat = new THREE.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.8
+      });
+      const line = new THREE.Line(geo, mat);
+      this.guidesGroup.add(line);
+
+      // Add a small helper rings along the arc path representing flow direction
+      for (let j = 1; j < segments; j += 4) {
+        const rGeo = new THREE.RingGeometry(0.15, 0.22, 8);
+        const rMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(rGeo, rMat);
+        ring.position.copy(points[j]);
+        
+        // Orient ring facing the next point on arc
+        ring.lookAt(points[j + 1]);
+        this.guidesGroup.add(ring);
+      }
+    };
+
+    if (levelNumber === 2) {
+      // Guide 1: Floor -> Elevator 1 -> Plat A
+      createDashLine(new THREE.Vector3(-8, 0.1, 14), new THREE.Vector3(-8, 4.1, 14), 0xffee00); // Vertical rise
+      createDashLine(new THREE.Vector3(-8, 4.1, 14), new THREE.Vector3(0, 4.1, 14), 0x00f0ff);  // Leap to Plat A
+
+      // Guide 2: Plat B -> Elevator 2 -> Plat D
+      createDashLine(new THREE.Vector3(-15, 8.1, 0), new THREE.Vector3(-12, 8.1, -6), 0xff00b4);
+      createDashLine(new THREE.Vector3(-5, 9.6, -12), new THREE.Vector3(0, 11.1, -14), 0x00f0ff);
+
+      // Guide 3: Plat C -> Elevator 3 -> Plat D
+      createDashLine(new THREE.Vector3(15, 8.1, 0), new THREE.Vector3(8, 4.1, -14), 0xff00b4);
+      createDashLine(new THREE.Vector3(8, 4.1, -14), new THREE.Vector3(8, 11.1, -14), 0xffee00);
+      createDashLine(new THREE.Vector3(8, 11.1, -14), new THREE.Vector3(0, 11.1, -14), 0x00f0ff);
+
+    } else if (levelNumber === 3) {
+      // Guide Arc 1: Portal A Magenta Route
+      createArcLine(new THREE.Vector3(-16, 4.8, -16), new THREE.Vector3(16, 8.8, 16), 0xff00b4);
+
+      // Guide Arc 2: Portal B Cyan Route
+      createArcLine(new THREE.Vector3(16, 4.8, -16), new THREE.Vector3(-16, 8.8, 16), 0x00f0ff);
+
+      // Guide Arc 3: Portal C Yellow Route
+      createArcLine(new THREE.Vector3(0, 0.1, 24), new THREE.Vector3(0, 11.8, 0), 0xffee00);
+
+      // Guide 4: Floor -> Elevator -> Plat 5
+      createDashLine(new THREE.Vector3(0, 0.1, -18), new THREE.Vector3(0, 11.1, -18), 0xffee00);
+      createDashLine(new THREE.Vector3(0, 11.1, -18), new THREE.Vector3(0, 11.1, 0), 0xffee00);
     }
   }
 
@@ -633,17 +730,16 @@ export class GameWorld {
     });
 
     // Static platforms
-    this.createCrystalMesh(0, 5.2, 15, 'crystal_pA');      // Platform A
-    this.createCrystalMesh(-18, 9.2, 0, 'crystal_pB1');    // Platform B
-    this.createCrystalMesh(-18, 9.2, 3, 'crystal_pB2');
-    this.createCrystalMesh(18, 9.2, 0, 'crystal_pC1');     // Platform C
-    this.createCrystalMesh(18, 9.2, -3, 'crystal_pC2');
-    this.createCrystalMesh(0, 13.2, -15, 'crystal_pD1');   // Platform D
-    this.createCrystalMesh(3, 13.2, -15, 'crystal_pD2');
+    this.createCrystalMesh(0, 5.2, 14, 'crystal_pA');      // Platform A
+    this.createCrystalMesh(-15, 9.2, 0, 'crystal_pB1');    // Platform B
+    this.createCrystalMesh(-15, 9.2, 3, 'crystal_pB2');
+    this.createCrystalMesh(15, 9.2, 0, 'crystal_pC1');     // Platform C
+    this.createCrystalMesh(15, 9.2, -3, 'crystal_pC2');
+    this.createCrystalMesh(0, 12.2, -14, 'crystal_pD1');   // Platform D
+    this.createCrystalMesh(3, 12.2, -14, 'crystal_pD2');
 
     // Crystal floating on Moving Platform 2
-    // We attach it to the index of our moving platforms (1)
-    this.createCrystalMesh(-10, 9.2, -7.5, 'crystal_moving_p2', 1);
+    this.createCrystalMesh(-12, 9.2, -6, 'crystal_moving_p2', 4); // Index 4 is moving platform 2
   }
 
   // LEVEL 3: Core spots, portal paths, and central high platform
@@ -658,25 +754,25 @@ export class GameWorld {
     });
 
     // Platform 1 (Low corner)
-    this.createCrystalMesh(-20, 5.2, -20, 'crystal_3_p1_a');
-    this.createCrystalMesh(-18, 5.2, -22, 'crystal_3_p1_b');
+    this.createCrystalMesh(-16, 5.2, -16, 'crystal_3_p1_a');
+    this.createCrystalMesh(-14, 5.2, -18, 'crystal_3_p1_b');
 
     // Platform 2 (Low corner)
-    this.createCrystalMesh(20, 5.2, -20, 'crystal_3_p2_a');
-    this.createCrystalMesh(18, 5.2, -22, 'crystal_3_p2_b');
+    this.createCrystalMesh(16, 5.2, -16, 'crystal_3_p2_a');
+    this.createCrystalMesh(14, 5.2, -18, 'crystal_3_p2_b');
 
     // Platform 3 (Mid corner)
-    this.createCrystalMesh(-20, 9.2, 20, 'crystal_3_p3_a');
-    this.createCrystalMesh(-22, 9.2, 18, 'crystal_3_p3_b');
+    this.createCrystalMesh(-16, 9.2, 16, 'crystal_3_p3_a');
+    this.createCrystalMesh(-18, 9.2, 14, 'crystal_3_p3_b');
 
     // Platform 4 (Mid corner)
-    this.createCrystalMesh(20, 9.2, 20, 'crystal_3_p4_a');
-    this.createCrystalMesh(22, 9.2, 18, 'crystal_3_p4_b');
+    this.createCrystalMesh(16, 9.2, 16, 'crystal_3_p4_a');
+    this.createCrystalMesh(18, 9.2, 14, 'crystal_3_p4_b');
 
-    // Platform 5 (Central High y=12)
-    this.createCrystalMesh(0, 13.2, 0, 'crystal_3_p5_a');
-    this.createCrystalMesh(3, 13.2, 3, 'crystal_3_p5_b');
-    this.createCrystalMesh(-3, 13.2, -3, 'crystal_3_p5_c');
+    // Platform 5 (Central High y=11)
+    this.createCrystalMesh(0, 12.2, 0, 'crystal_3_p5_a');
+    this.createCrystalMesh(3, 12.2, 3, 'crystal_3_p5_b');
+    this.createCrystalMesh(-3, 12.2, -3, 'crystal_3_p5_c');
   }
 
   // Main tick loop updates for animating elements
@@ -697,7 +793,6 @@ export class GameWorld {
       if (c.isAttachedPlatform !== null && c.isAttachedPlatform !== undefined) {
         const plat = this.platforms[c.isAttachedPlatform];
         if (plat) {
-          // Slide base coordinate along with the moving platform mesh
           c.basePosition.copy(plat.mesh.position);
           c.basePosition.y += 1.2; // Offset height
         }
@@ -741,18 +836,17 @@ export class GameWorld {
         if (l.timer >= l.activeTime) {
           l.isActive = false;
           l.timer = 0;
-          l.beamMat.opacity = 0.04; // Visual fade out
+          l.beamMat.opacity = 0.04; 
         }
       } else {
         if (l.timer >= l.inactiveTime) {
           l.isActive = true;
           l.timer = 0;
-          l.beamMat.opacity = 0.85; // Visual fade in
+          l.beamMat.opacity = 0.85; 
         }
       }
 
       if (l.isActive) {
-        // Visual pulsing spark fluctuation
         l.beamMat.opacity = 0.72 + Math.sin(time * 25.0) * 0.12;
       }
     });
@@ -764,7 +858,6 @@ export class GameWorld {
 
     // 5. Update AI Guards patrol logic and chase actions
     this.guards.forEach(g => {
-      // Rotation
       g.coreMesh.rotation.y += 1.4 * delta;
       g.coreMesh.rotation.x += 0.6 * delta;
 
@@ -776,7 +869,6 @@ export class GameWorld {
         targetPos = new THREE.Vector3(g.targetPlayer.x, g.mesh.position.y, g.targetPlayer.z);
         g.speed = g.chaseSpeed;
         
-        // Rapid alarm color pulsing (Red/Orange flashing)
         const flash = Math.sin(time * 18.0) > 0;
         g.coreMesh.material.color.setHex(flash ? 0xff0000 : 0xff7700);
         g.coreMesh.material.emissive.setHex(flash ? 0xff0000 : 0xff7700);
@@ -784,7 +876,6 @@ export class GameWorld {
         targetPos = g.patrolNodes[g.currentNodeIdx];
         g.speed = g.patrolSpeed;
         
-        // Static alert red glow
         g.coreMesh.material.color.setHex(0xff2200);
         g.coreMesh.material.emissive.setHex(0xff2200);
       }
@@ -801,7 +892,6 @@ export class GameWorld {
     });
   }
 
-  // Remove collected crystal from world scene
   removeCrystal(crystalId) {
     const index = this.crystals.findIndex((c) => c.id === crystalId);
     if (index !== -1) {

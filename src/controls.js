@@ -14,6 +14,7 @@ export class PlayerControls {
     this.moveLeft = false;
     this.moveRight = false;
     this.canJump = false;
+    this.jumpCount = 0;
 
     // Physics parameters
     this.velocity = new THREE.Vector3();
@@ -40,6 +41,7 @@ export class PlayerControls {
     this.camera.position.set(0, this.playerHeight, 0);
     this.camera.lookAt(0, this.playerHeight, -10);
     this.velocity.set(0, 0, 0);
+    this.jumpCount = 0;
   }
 
   onKeyDown(event) {
@@ -63,10 +65,12 @@ export class PlayerControls {
         this.moveRight = true;
         break;
       case 'Space':
-        if (this.canJump) {
-          this.velocity.y = this.jumpStrength;
+        if (this.canJump || this.jumpCount < 2) {
+          const isDoubleJump = this.jumpCount > 0;
+          this.velocity.y = isDoubleJump ? this.jumpStrength * 0.95 : this.jumpStrength;
+          this.jumpCount++;
           this.canJump = false;
-          if (this.onJump) this.onJump();
+          if (this.onJump) this.onJump(isDoubleJump);
         }
         break;
     }
@@ -161,6 +165,7 @@ export class PlayerControls {
       this.velocity.y = 0;
       this.camera.position.y = groundY + this.playerHeight;
       this.canJump = true;
+      this.jumpCount = 0;
 
       // Sync position with moving platforms
       if (standingPlatform && standingPlatform.displacement) {
@@ -169,6 +174,8 @@ export class PlayerControls {
         this.camera.position.z += standingPlatform.displacement.z;
       }
     } else {
+      // In air - don't force canJump to true, but do not set canJump to false if we still have jumps left
+      // Actually, we can let canJump be false, since our space trigger checks `this.canJump || this.jumpCount < 2`
       this.canJump = false;
     }
 
