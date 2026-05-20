@@ -27,6 +27,10 @@ class GameApp {
     this.laserHitCooldown = 0;
     this.portalCooldown = 0;
 
+    // Weapons and Combat
+    this.ammo = 5;
+    this.projectiles = [];
+
     // Components
     this.audio = new AudioManager();
     this.particles = null;
@@ -229,6 +233,17 @@ class GameApp {
           this.closeLevelSelect();
         }
       }
+      if (e.code === 'KeyM') {
+        const isMuted = this.audio.toggleMusic();
+        this.showScoreSplash(isMuted ? 'BACKGROUND MUSIC MUTED' : 'BACKGROUND MUSIC SYNCED');
+      }
+    });
+
+    // Fire weapon on left mouse click when cursor is locked and game is playing
+    window.addEventListener('mousedown', (e) => {
+      if (this.gameState === 'PLAYING' && e.button === 0 && !this.isLevelSelecting && this.controls.controls.isLocked) {
+        this.fireWeapon();
+      }
     });
 
     // Sector select actions
@@ -274,6 +289,13 @@ class GameApp {
 
     this.timer.reset();
     this.resetCombo();
+
+    // Reset weapons and projectiles
+    this.ammo = 5;
+    const ammoEl = document.getElementById('ammo-count');
+    if (ammoEl) ammoEl.textContent = '5';
+    this.projectiles.forEach(p => this.scene.remove(p.mesh));
+    this.projectiles = [];
   }
 
   // Reset combo tracking
@@ -282,6 +304,96 @@ class GameApp {
     this.comboTimer = 0.0;
     this.comboContainer.classList.add('hidden');
     this.comboContainer.classList.remove('combo-active');
+  }
+
+  fireWeapon() {
+    if (this.ammo <= 0) {
+      this.audio.playEmptyClipSound();
+      this.showPenaltySplash('NO AMMUNITION SHELLS');
+      return;
+    }
+
+    this.ammo--;
+    const ammoEl = document.getElementById('ammo-count');
+    if (ammoEl) ammoEl.textContent = this.ammo;
+    this.audio.playLaserShootSound();
+
+    // Fire direction from camera world orientation
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+
+    // Position starting slightly forward and lower
+    const spawnPos = this.camera.position.clone().addScaledVector(dir, 0.5);
+    spawnPos.y -= 0.15;
+
+    // Glowing cyan/yellow projectile mesh
+    const geo = new THREE.SphereGeometry(0.1, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(spawnPos);
+    this.scene.add(mesh);
+
+    this.projectiles.push({
+      mesh,
+      direction: dir,
+      speed: 48.0,
+      timeLeft: 1.4
+    });
+
+    // Fire sparks particle burst
+    this.particles.spawn(spawnPos, 0xffff00, 4);
+  }
+
+  collectAmmoPack(ammoPack, index) {
+    this.scene.remove(ammoPack.mesh);
+    this.world.ammoPacks.splice(index, 1);
+    
+    this.ammo += 3;
+    const ammoEl = document.getElementById('ammo-count');
+    if (ammoEl) ammoEl.textContent = this.ammo;
+    this.audio.playAmmoCollectSound();
+    
+    this.showScoreSplash('+3 AMMO SECURED');
+    this.particles.spawn(ammoPack.mesh.position, 0xffff00, 15);
+  }
+
+  damageGuard(guard, index, fireDirection) {
+    guard.health--;
+    
+    // Impact pushback
+    const pushDir = fireDirection.clone();
+    pushDir.y = 0;
+    pushDir.normalize();
+    guard.mesh.position.addScaledVector(pushDir, 1.6);
+    
+    // Spawn damage sparks
+    this.particles.spawn(guard.mesh.position, 0xffaa00, 10);
+
+    if (guard.health <= 0) {
+      this.audio.playGuardExplosionSound();
+      this.particles.spawn(guard.mesh.position, 0xff3300, 24);
+      
+      this.score += 500;
+      this.totalScore += 500;
+      this.scoreCountEl.textContent = this.score;
+      this.showScoreSplash('SENTINEL DESTROYED +500');
+
+      this.scene.remove(guard.mesh);
+      this.world.guards.splice(index, 1);
+    } else {
+      this.audio.playGuardDamageSound();
+      
+      // Update billboard health bar
+      const ratio = Math.max(0, guard.health / guard.maxHealth);
+      guard.healthBarFg.scale.x = ratio;
+      guard.healthBarFg.position.x = - (1.0 - ratio) * 0.6; // Shift pivot
+
+      if (ratio < 0.35) {
+        guard.healthBarFg.material.color.setHex(0xff3300); // Red
+      } else if (ratio < 0.65) {
+        guard.healthBarFg.material.color.setHex(0xffaa00); // Orange
+      }
+    }
   }
 
   // Update combo decay bar
@@ -375,6 +487,13 @@ class GameApp {
     this.timeLeft = this.gameDuration;
     this.gameState = 'PLAYING';
     
+    // Reset weapons and projectiles
+    this.ammo = 5;
+    const ammoEl = document.getElementById('ammo-count');
+    if (ammoEl) ammoEl.textContent = '5';
+    this.projectiles.forEach(p => this.scene.remove(p.mesh));
+    this.projectiles = [];
+    
     // Load next level assets
     this.world.loadLevel(this.currentLevel);
     this.controls.resetPosition();
@@ -411,6 +530,13 @@ class GameApp {
     this.currentLevel = level;
     this.score = 0;
     this.scoreCountEl.textContent = '0';
+
+    // Reset weapons and projectiles
+    this.ammo = 5;
+    const ammoEl = document.getElementById('ammo-count');
+    if (ammoEl) ammoEl.textContent = '5';
+    this.projectiles.forEach(p => this.scene.remove(p.mesh));
+    this.projectiles = [];
     
     if (level === 1) {
       this.totalCrystals = 15;
@@ -727,6 +853,41 @@ class GameApp {
         }
       }
 
+      // Check collision: Player camera to ammo packs
+      const ammoPacks = this.world.getAmmoPacks();
+      for (let i = ammoPacks.length - 1; i >= 0; i--) {
+        const a = ammoPacks[i];
+        const dist = playerPos.distanceTo(a.mesh.position);
+        if (dist < collectThreshold) {
+          this.collectAmmoPack(a, i);
+        }
+      }
+
+      // Update weapon projectiles and collision checks
+      const guards = this.world.getGuards();
+      for (let i = this.projectiles.length - 1; i >= 0; i--) {
+        const proj = this.projectiles[i];
+        proj.timeLeft -= delta;
+        proj.mesh.position.addScaledVector(proj.direction, proj.speed * delta);
+
+        let hit = false;
+        // Check collision against guards
+        for (let j = guards.length - 1; j >= 0; j--) {
+          const guard = guards[j];
+          const dist = proj.mesh.position.distanceTo(guard.mesh.position);
+          if (dist < 1.8) {
+            this.damageGuard(guard, j, proj.direction);
+            hit = true;
+            break;
+          }
+        }
+
+        if (hit || proj.timeLeft <= 0) {
+          this.scene.remove(proj.mesh);
+          this.projectiles.splice(i, 1);
+        }
+      }
+
       // Check collision: Player to cyclic lasers
       const lasers = this.world.getLasers();
       const playerRadius = this.controls.playerRadius;
@@ -782,7 +943,6 @@ class GameApp {
       }
 
       // Check AI patrol drones chase & attack loops
-      const guards = this.world.getGuards();
       for (const guard of guards) {
         const dist = playerPos.distanceTo(guard.mesh.position);
 
@@ -940,6 +1100,15 @@ class GameApp {
 
     // Update level assets
     this.world.update(time, delta);
+
+    // Billboard active sentry health bars to face camera
+    const camera = this.camera;
+    this.world.getGuards().forEach(g => {
+      if (g.healthBarGroup) {
+        g.healthBarGroup.quaternion.copy(camera.quaternion);
+      }
+    });
+
     this.particles.update(delta);
     this.drawRadar(time);
 

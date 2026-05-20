@@ -11,6 +11,7 @@ export class GameWorld {
     this.lasers = [];         // Cyclic lasers
     this.portals = [];        // Portal pads
     this.guards = [];         // Enemy drones
+    this.ammoPacks = [];      // Bullet packs
     
     this.gravityLifts = [];
     this.velocityPads = [];
@@ -46,6 +47,9 @@ export class GameWorld {
   clearLevel() {
     this.crystals.forEach(c => this.scene.remove(c.mesh));
     this.crystals = [];
+
+    this.ammoPacks.forEach(a => this.scene.remove(a.mesh));
+    this.ammoPacks = [];
 
     this.platforms.forEach(p => this.scene.remove(p.mesh));
     this.platforms = [];
@@ -209,25 +213,25 @@ export class GameWorld {
       this.createLaser(-5, 0, 5, 0, 11.0, 1.8, 1.8);       // Sweeps Plat 5
       this.createLaser(-10, 0, 10, 0, 0, 2.2, 1.5);        // Floor lane obstacle
 
-      // AI Patrol Guards
+      // AI Patrol Guards (Sector 3: 2 Health)
       this.createGuard([
         { x: -16, y: 0, z: -16 },
         { x: -16, y: 0, z: 16 },
         { x: 16, y: 0, z: 16 },
         { x: 16, y: 0, z: -16 }
-      ], 4.5);
+      ], 4.5, 2);
 
       this.createGuard([
         { x: -5, y: 11, z: -5 },
         { x: 5, y: 11, z: -5 },
         { x: 5, y: 11, z: 5 },
         { x: -5, y: 11, z: 5 }
-      ], 3.8);
+      ], 3.8, 2);
 
       this.createGuard([
         { x: -28, y: 0, z: -25 },
         { x: 28, y: 0, z: -25 }
-      ], 5.5);
+      ], 5.5, 2);
 
       this.spawnCrystalsLevel3();
       this.buildNavigationGuides(3);
@@ -304,18 +308,18 @@ export class GameWorld {
       this.createSearchlight(20, 24, -10, 8.0, 1.2, 3.2);        // Right
       this.createSearchlight(0, 24, 18, 9.0, 1.5, 3.6);          // Center
 
-      // Patrol Guards
+      // Patrol Guards (Sector 5: 3 Health)
       this.createGuard([
         { x: -28, y: 0, z: -15 },
         { x: -28, y: 0, z: 15 },
         { x: -12, y: 0, z: 15 }
-      ], 4.2);
+      ], 4.2, 3);
 
       this.createGuard([
         { x: 28, y: 0, z: -15 },
         { x: 28, y: 0, z: 15 },
         { x: 12, y: 0, z: 15 }
-      ], 4.2);
+      ], 4.2, 3);
 
       this.spawnCrystalsLevel5();
       this.buildNavigationGuides(5);
@@ -342,6 +346,9 @@ export class GameWorld {
       this.spawnCrystalsLevel6();
       this.buildNavigationGuides(6);
     }
+
+    // Spawn ammunition packs across all levels
+    this.spawnAmmoPacks(levelNumber);
 
     // Keep guides visibility setting
     this.guidesGroup.visible = this.guidesVisible;
@@ -781,8 +788,8 @@ export class GameWorld {
     });
   }
 
-  // 7. Create AI Guard
-  createGuard(patrolPoints, speed = 4.0) {
+  // 7. Create AI Guard (now with health parameters and billboarded life bar)
+  createGuard(patrolPoints, speed = 4.0, maxHealth = 3) {
     const group = new THREE.Group();
     group.position.copy(patrolPoints[0]);
     group.position.y += 1.3; // Hover altitude
@@ -810,6 +817,25 @@ export class GameWorld {
     const outerMesh = new THREE.Mesh(outerGeo, outerMat);
     group.add(outerMesh);
 
+    // 3D Floating Health Bar billboard group
+    const healthBarGroup = new THREE.Group();
+    healthBarGroup.position.set(0, 1.3, 0); // Position above drone
+
+    // Health bar background plane (Red/Dark)
+    const bgGeo = new THREE.PlaneGeometry(1.2, 0.14);
+    const bgMat = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.DoubleSide });
+    const bgMesh = new THREE.Mesh(bgGeo, bgMat);
+    healthBarGroup.add(bgMesh);
+
+    // Health bar foreground plane (Green)
+    const fgGeo = new THREE.PlaneGeometry(1.2, 0.14);
+    const fgMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+    const fgMesh = new THREE.Mesh(fgGeo, fgMat);
+    fgMesh.position.z = 0.01; // Avoid z-fighting
+    healthBarGroup.add(fgMesh);
+
+    group.add(healthBarGroup);
+
     this.scene.add(group);
 
     this.guards.push({
@@ -822,8 +848,84 @@ export class GameWorld {
       targetPlayer: null,
       speed,
       patrolSpeed: speed,
-      chaseSpeed: speed * 1.85
+      chaseSpeed: speed * 1.85,
+      
+      // Health properties
+      health: maxHealth,
+      maxHealth: maxHealth,
+      healthBarGroup,
+      healthBarFg: fgMesh
     });
+  }
+
+  // Helper: Spawn rotating neon-yellow ammo crate
+  createAmmoMesh(x, y, z, id) {
+    const ammoGroup = new THREE.Group();
+    ammoGroup.position.set(x, y, z);
+
+    // Outer cage box (wireframe neon yellow)
+    const cageGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const cageMat = new THREE.MeshStandardMaterial({
+      color: 0xffff00,
+      emissive: 0xffff00,
+      emissiveIntensity: 1.2,
+      wireframe: true
+    });
+    const cageMesh = new THREE.Mesh(cageGeo, cageMat);
+    ammoGroup.add(cageMesh);
+
+    // Inner capsule (bright orange-yellow)
+    const capGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.38, 8);
+    const capMat = new THREE.MeshStandardMaterial({
+      color: 0xffaa00,
+      emissive: 0xffaa00,
+      emissiveIntensity: 1.8,
+      roughness: 0.1,
+      metalness: 0.8
+    });
+    const capMesh = new THREE.Mesh(capGeo, capMat);
+    capMesh.rotation.x = Math.PI / 2;
+    ammoGroup.add(capMesh);
+
+    this.scene.add(ammoGroup);
+
+    this.ammoPacks.push({
+      id,
+      mesh: ammoGroup,
+      basePosition: new THREE.Vector3(x, y, z),
+      bobOffset: Math.random() * Math.PI * 2
+    });
+  }
+
+  // Ammo coordinate layouts for Sectors 1-6
+  spawnAmmoPacks(levelNumber) {
+    if (levelNumber === 1) {
+      this.createAmmoMesh(-12, 1.2, -12, 'ammo_1_1');
+      this.createAmmoMesh(12, 1.2, 12, 'ammo_1_2');
+      this.createAmmoMesh(0, 1.2, -16, 'ammo_1_3');
+    } else if (levelNumber === 2) {
+      this.createAmmoMesh(-15, 9.2, -5, 'ammo_2_1');
+      this.createAmmoMesh(15, 9.2, 5, 'ammo_2_2');
+      this.createAmmoMesh(0, 1.2, -8, 'ammo_2_3');
+    } else if (levelNumber === 3) {
+      this.createAmmoMesh(-16, 5.2, -14, 'ammo_3_1');
+      this.createAmmoMesh(16, 5.2, -14, 'ammo_3_2');
+      this.createAmmoMesh(-16, 9.2, 14, 'ammo_3_3');
+      this.createAmmoMesh(16, 9.2, 14, 'ammo_3_4');
+    } else if (levelNumber === 4) {
+      this.createAmmoMesh(-18, 7.2, 6, 'ammo_4_1');
+      this.createAmmoMesh(18, 7.2, 6, 'ammo_4_2');
+      this.createAmmoMesh(0, 11.2, -2, 'ammo_4_3');
+    } else if (levelNumber === 5) {
+      this.createAmmoMesh(-20, 7.2, -18, 'ammo_5_1');
+      this.createAmmoMesh(20, 7.2, -18, 'ammo_5_2');
+      this.createAmmoMesh(-20, 12.2, 18, 'ammo_5_3');
+      this.createAmmoMesh(20, 12.2, 18, 'ammo_5_4');
+    } else if (levelNumber === 6) {
+      this.createAmmoMesh(0, 3, 22, 'ammo_6_1');
+      this.createAmmoMesh(0, 11, -22, 'ammo_6_2');
+      this.createAmmoMesh(0, 5, 12, 'ammo_6_3');
+    }
   }
 
   // Helper: Spawn crystal mesh
@@ -975,6 +1077,19 @@ export class GameWorld {
       }
       c.mesh.position.copy(c.basePosition);
       c.mesh.position.y += bobY;
+    });
+
+    // Bob and rotate ammo packs
+    this.ammoPacks.forEach(a => {
+      a.mesh.rotation.y += 0.8 * delta;
+      a.mesh.rotation.x += 0.4 * delta;
+
+      const bobDistance = 0.15;
+      const bobSpeed = 2.5;
+      const bobY = Math.sin(time * bobSpeed + a.bobOffset) * bobDistance;
+
+      a.mesh.position.copy(a.basePosition);
+      a.mesh.position.y += bobY;
     });
 
     // 2. Animate Moving Platforms and calculate displacement
@@ -1429,5 +1544,9 @@ export class GameWorld {
 
   getSweepers() {
     return this.sweepers;
+  }
+
+  getAmmoPacks() {
+    return this.ammoPacks;
   }
 }
