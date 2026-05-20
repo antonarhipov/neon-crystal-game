@@ -205,6 +205,24 @@
       </div>
     </div>
 
+    <!-- 5. Sector Select Screen (Debug/Testing) -->
+    <div id="levelselect-screen" class="screen-overlay hidden">
+      <div class="screen-card glass-panel" style="border: var(--border-neon-magenta); box-shadow: var(--glow-magenta); max-width: 400px; padding: 30px;">
+        <h1 class="cyber-title magenta-glow-text" style="font-size: 1.8rem; margin-bottom: 10px;">Sector Select</h1>
+        <p class="screen-desc" style="font-size: 0.85rem; margin-bottom: 20px;">
+          Choose a sector grid for deployment and testing:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <button class="cyber-btn btn-cyan level-select-btn" data-level="1" style="padding: 10px 15px; font-size: 0.9rem;">Sector 1: Arena Grid</button>
+          <button class="cyber-btn btn-cyan level-select-btn" data-level="2" style="padding: 10px 15px; font-size: 0.9rem;">Sector 2: Elevators & Lasers</button>
+          <button class="cyber-btn btn-cyan level-select-btn" data-level="3" style="padding: 10px 15px; font-size: 0.9rem;">Sector 3: Drones & Portals</button>
+        </div>
+
+        <button id="levelselect-close-btn" class="cyber-btn btn-magenta" style="padding: 8px 20px; font-size: 0.8rem;">Cancel</button>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

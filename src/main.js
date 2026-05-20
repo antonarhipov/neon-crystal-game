@@ -51,12 +51,16 @@ class GameApp {
     this.gameoverScreen = document.getElementById('gameover-screen');
     this.victoryScreen = document.getElementById('victory-screen');
     this.levelclearScreen = document.getElementById('levelclear-screen');
+    this.levelselectScreen = document.getElementById('levelselect-screen');
     
     // Action Buttons
     this.startBtn = document.getElementById('start-btn');
     this.restartBtn = document.getElementById('restart-btn');
     this.playAgainBtn = document.getElementById('play-again-btn');
     this.nextLevelBtn = document.getElementById('next-level-btn');
+    this.levelselectCloseBtn = document.getElementById('levelselect-close-btn');
+
+    this.isLevelSelecting = false;
 
     // Radar Elements
     this.radarCanvas = document.getElementById('radar-canvas');
@@ -198,13 +202,16 @@ class GameApp {
     });
 
     this.controls.controls.addEventListener('unlock', () => {
+      if (this.isLevelSelecting) {
+        return;
+      }
       if (this.gameState === 'PLAYING') {
         this.startBtn.textContent = 'Resume Mission';
         this.startScreen.classList.remove('hidden');
       }
     });
 
-    // Toggle holographic path guide using 'H' key
+    // Toggle holographic path guide using 'H' key / Toggle Sector select using 'L' key
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyH' && this.gameState === 'PLAYING') {
         const nextVisible = !this.world.guidesVisible;
@@ -212,6 +219,29 @@ class GameApp {
         this.showPenaltySplash(nextVisible ? 'HOLOGRAPHIC GUIDES ON' : 'HOLOGRAPHIC GUIDES OFF');
         this.audio.playGuideToggleSound();
       }
+      if (e.code === 'KeyL') {
+        if (this.gameState === 'PLAYING' || this.gameState === 'START') {
+          this.isLevelSelecting = true;
+          this.controls.controls.unlock();
+          this.startScreen.classList.add('hidden');
+          this.levelselectScreen.classList.remove('hidden');
+        } else if (this.isLevelSelecting) {
+          this.closeLevelSelect();
+        }
+      }
+    });
+
+    // Sector select actions
+    this.levelselectCloseBtn.addEventListener('click', () => {
+      this.closeLevelSelect();
+    });
+
+    const selectButtons = document.querySelectorAll('.level-select-btn');
+    selectButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const level = parseInt(btn.getAttribute('data-level'));
+        this.loadSelectedLevel(level);
+      });
     });
 
     // Handle resize
@@ -350,6 +380,57 @@ class GameApp {
     
     // Relock mouse to resume playing
     this.controls.controls.lock();
+  }
+
+  closeLevelSelect() {
+    this.levelselectScreen.classList.add('hidden');
+    this.isLevelSelecting = false;
+    if (this.gameState === 'PLAYING') {
+      this.controls.controls.lock();
+    } else {
+      this.startScreen.classList.remove('hidden');
+    }
+  }
+
+  loadSelectedLevel(level) {
+    this.levelselectScreen.classList.add('hidden');
+    this.isLevelSelecting = false;
+    
+    // Set level configurations
+    this.currentLevel = level;
+    this.score = 0;
+    this.scoreCountEl.textContent = '0';
+    
+    if (level === 1) {
+      this.totalCrystals = 15;
+      this.gameDuration = 60.0;
+    } else if (level === 2) {
+      this.totalCrystals = 14;
+      this.gameDuration = 75.0;
+    } else if (level === 3) {
+      this.totalCrystals = 15;
+      this.gameDuration = 90.0;
+    }
+    
+    this.targetCountEl.textContent = this.totalCrystals;
+    document.getElementById('level-display').textContent = this.currentLevel;
+    
+    this.gameState = 'PLAYING';
+    this.world.loadLevel(level);
+    this.controls.resetPosition();
+    this.timeLeft = this.gameDuration;
+    this.timerTextEl.textContent = `${this.timeLeft.toFixed(1)}s`;
+    this.timerFillEl.style.width = '100%';
+    this.timerFillEl.classList.remove('warning');
+    
+    this.audio.init();
+    this.audio.resume();
+    this.audio.startAmbientDrone();
+    
+    this.controls.controls.lock();
+    this.showPenaltySplash(`SECTOR ${level} LOADED`);
+    
+    this.audio.playGuideToggleSound();
   }
 
   // Handle victory state transitions
