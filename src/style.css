@@ -1,0 +1,460 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Orbitron:wght@500;700;900&display=swap');
+
+:root {
+  --neon-cyan: #00f0ff;
+  --neon-magenta: #ff00b4;
+  --neon-yellow: #ffee00;
+  --neon-green: #39ff14;
+  
+  --bg-dark: rgba(6, 9, 15, 0.75);
+  --border-neon-cyan: 1px solid rgba(0, 240, 255, 0.3);
+  --border-neon-magenta: 1px solid rgba(255, 0, 180, 0.3);
+  
+  --glow-cyan: 0 0 10px rgba(0, 240, 255, 0.5), 0 0 20px rgba(0, 240, 255, 0.2);
+  --glow-magenta: 0 0 10px rgba(255, 0, 180, 0.5), 0 0 20px rgba(255, 0, 180, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #030508;
+  font-family: 'Inter', sans-serif;
+  color: #e2e8f0;
+}
+
+/* 3D Game Canvas */
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* HUD Layer */
+#hud-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none; /* Let clicks pass through to lock pointer */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: var(--bg-dark);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: var(--border-neon-cyan);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border-radius: 12px;
+  pointer-events: auto;
+}
+
+/* Top HUD Row */
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Score Panel */
+.score-panel {
+  padding: 15px 25px;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 1px;
+}
+
+.score-title {
+  font-size: 0.75rem;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+  text-shadow: var(--glow-cyan);
+}
+
+.score-value {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  display: flex;
+  align-items: baseline;
+  margin-top: 2px;
+}
+
+.score-total {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 5px;
+}
+
+/* Controls indicator in HUD (Top Center) */
+.hud-keys-hint {
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-icon {
+  background: #2d3748;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* Radar / Minimap */
+.radar-panel {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: var(--border-neon-cyan);
+  box-shadow: var(--glow-cyan);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#radar-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+/* Bottom HUD Row */
+.hud-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Timer Bar Container */
+.timer-container {
+  width: 100%;
+  padding: 12px 20px;
+}
+
+.timer-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  color: var(--neon-cyan);
+  text-shadow: var(--glow-cyan);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  letter-spacing: 1px;
+}
+
+.timer-track {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.timer-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-cyan) 0%, #00bcff 100%);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  transition: width 0.1s linear, background 0.5s ease;
+  border-radius: 5px;
+}
+
+.timer-fill.warning {
+  background: linear-gradient(90deg, var(--neon-magenta) 0%, #ff0055 100%);
+  box-shadow: 0 0 12px rgba(255, 0, 180, 0.8);
+  animation: pulse-glow 0.8s infinite alternate;
+}
+
+/* Sound / Mute Toggle Button */
+.sound-toggle-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: var(--border-neon-cyan);
+  background: var(--bg-dark);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  transition: all 0.3s;
+  pointer-events: auto;
+}
+
+.sound-toggle-btn:hover {
+  transform: scale(1.1);
+  border-color: var(--neon-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+/* Game Screens Overlay (Start / Game Over / Victory) */
+.screen-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(2, 4, 8, 0.85);
+  transition: opacity 0.5s ease;
+}
+
+.screen-card {
+  width: 90%;
+  max-width: 550px;
+  padding: 40px;
+  text-align: center;
+  animation: fade-scale-in 0.4s ease-out;
+}
+
+.screen-card.victory-card {
+  border: var(--border-neon-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.screen-card.gameover-card {
+  border: var(--border-neon-magenta);
+  box-shadow: var(--glow-magenta);
+}
+
+/* Typography styles inside screens */
+.cyber-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.cyan-glow-text {
+  color: var(--neon-cyan);
+  text-shadow: var(--glow-cyan);
+}
+
+.magenta-glow-text {
+  color: var(--neon-magenta);
+  text-shadow: var(--glow-magenta);
+}
+
+.screen-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 30px;
+}
+
+/* How to play instruction grid */
+.instructions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  text-align: left;
+  margin-bottom: 35px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px 0;
+}
+
+.instruction-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.instruction-item strong {
+  color: #fff;
+}
+
+.instruction-icon {
+  width: 44px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Cyber Button Styling */
+.cyber-btn {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 15px 35px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s;
+  outline: none;
+}
+
+.btn-cyan {
+  background: var(--neon-cyan);
+  color: #030508;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.btn-cyan:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.8);
+}
+
+.btn-magenta {
+  background: var(--neon-magenta);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 0, 180, 0.4);
+}
+
+.btn-magenta:hover {
+  background: #fff;
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(255, 0, 180, 0.8);
+}
+
+/* Score Stats */
+.stats-display {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--neon-yellow);
+}
+
+/* Game feedback floating texts (e.g. crystal popups) */
+.pickup-splash {
+  position: absolute;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--neon-magenta);
+  text-shadow: var(--glow-magenta);
+  pointer-events: none;
+  animation: splash-float 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  z-index: 20;
+}
+
+.penalty-splash {
+  position: absolute;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--neon-magenta);
+  text-shadow: var(--glow-magenta);
+  pointer-events: none;
+  animation: splash-float 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  z-index: 20;
+}
+
+/* Hide utility */
+.hidden {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes fade-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+  from {
+    box-shadow: 0 0 10px rgba(255, 0, 180, 0.6);
+  }
+  to {
+    box-shadow: 0 0 22px rgba(255, 0, 180, 1);
+  }
+}
+
+@keyframes splash-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1.1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -160%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -200%) scale(0.8);
+  }
+}

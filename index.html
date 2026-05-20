@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Crystal Collector - 3D Adventure</title>
+  </head>
+  <body>
+    <!-- 3D WebGL Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI HUD Layer (HUD elements are transparent to clicks by default, button panels are interactive) -->
+    <div id="hud-container">
+      
+      <!-- Top Section -->
+      <div class="hud-top">
+        <!-- Score and Progress -->
+        <div class="score-panel glass-panel">
+          <div class="score-title">Crystals Collected</div>
+          <div class="score-value">
+            <span id="score-count">0</span>
+            <span class="score-total">/ <span id="target-count">15</span></span>
+          </div>
+        </div>
+
+        <!-- Controls Hint -->
+        <div class="hud-keys-hint">
+          <span class="key-icon">W</span>
+          <span class="key-icon">A</span>
+          <span class="key-icon">S</span>
+          <span class="key-icon">D</span> Move
+          <span style="color: rgba(255,255,255,0.3)">|</span>
+          <span class="key-icon">SPACE</span> Jump
+          <span style="color: rgba(255,255,255,0.3)">|</span>
+          <span class="key-icon">MOUSE</span> Look
+        </div>
+
+        <!-- Minimap Radar -->
+        <div class="radar-panel glass-panel">
+          <canvas id="radar-canvas" width="130" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="hud-bottom">
+        <!-- Energy Core Timer -->
+        <div class="timer-container glass-panel">
+          <div class="timer-label">
+            <span>Energy Core Stability</span>
+            <span id="timer-text">60.0s</span>
+          </div>
+          <div class="timer-track">
+            <div id="timer-fill" class="timer-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sound Mute Toggle -->
+      <button id="sound-btn" class="sound-toggle-btn" title="Toggle Sound">🔊</button>
+    </div>
+
+    <!-- Screen overlays -->
+    
+    <!-- 1. Start Screen -->
+    <div id="start-screen" class="screen-overlay">
+      <div class="screen-card glass-panel">
+        <h1 class="cyber-title cyan-glow-text">Neon Crystal</h1>
+        <h2 class="cyber-title magenta-glow-text" style="font-size: 1.5rem; margin-top: -15px;">Collector</h2>
+        <p class="screen-desc">
+          Navigate a futuristic cyber platform to collect floating energy crystals. Charge the grid core before energy levels deplete to zero. Beware the infinite outer space abyss!
+        </p>
+        
+        <div class="instructions-grid">
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span class="key-icon">W</span><span class="key-icon">A</span><span class="key-icon">S</span><span class="key-icon">D</span>
+            </div>
+            <span><strong>WASD / Arrows</strong> to navigate</span>
+          </div>
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span class="key-icon">SPACE</span>
+            </div>
+            <span><strong>Spacebar</strong> to Jump</span>
+          </div>
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span class="key-icon">MOUSE</span>
+            </div>
+            <span><strong>Click & Move</strong> to look around</span>
+          </div>
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span style="color: var(--neon-magenta); font-weight: bold; font-size: 1.2rem;">💎</span>
+            </div>
+            <span>Collect <strong>15 Crystals</strong> to win</span>
+          </div>
+        </div>
+
+        <button id="start-btn" class="cyber-btn btn-cyan">Initialize Core</button>
+      </div>
+    </div>
+
+    <!-- 2. Game Over Screen -->
+    <div id="gameover-screen" class="screen-overlay hidden">
+      <div class="screen-card gameover-card glass-panel">
+        <h1 class="cyber-title magenta-glow-text">System Offline</h1>
+        <p class="screen-desc">
+          Energy core depleted. Core connection lost in dark space.
+        </p>
+
+        <div class="stats-display">
+          <div class="stat-item">
+            <div class="stat-label">Crystals Collected</div>
+            <div class="stat-val" id="go-score">0 / 15</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">High Score</div>
+            <div class="stat-val" id="go-high-score">0</div>
+          </div>
+        </div>
+
+        <button id="restart-btn" class="cyber-btn btn-magenta">Reboot System</button>
+      </div>
+    </div>
+
+    <!-- 3. Victory Screen -->
+    <div id="victory-screen" class="screen-overlay hidden">
+      <div class="screen-card victory-card glass-panel">
+        <h1 class="cyber-title cyan-glow-text">Core Charged</h1>
+        <p class="screen-desc">
+          All crystals collected. Futuristic grid core fully powered and stabilized!
+        </p>
+
+        <div class="stats-display">
+          <div class="stat-item">
+            <div class="stat-label">Time Remaining</div>
+            <div class="stat-val" id="vic-time">0.0s</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Stability Bonus</div>
+            <div class="stat-val" id="vic-bonus">+0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Final Score</div>
+            <div class="stat-val" id="vic-score">0</div>
+          </div>
+        </div>
+
+        <button id="play-again-btn" class="cyber-btn btn-cyan">Reset System</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
