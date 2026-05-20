@@ -19,7 +19,8 @@ class GameApp {
     this.particles = null;
 
     // Timing
-    this.clock = new THREE.Clock();
+    this.timer = new THREE.Timer();
+    this.timer.connect(document);
 
     // DOM Elements
     this.canvas = document.getElementById('game-canvas');
@@ -205,8 +206,8 @@ class GameApp {
     this.timerFillEl.style.width = '100%';
     this.timerFillEl.classList.remove('warning');
 
-    // Reset clock
-    this.clock.getDelta();
+    // Reset timer
+    this.timer.reset();
   }
 
   // Handle game-over state transitions
@@ -396,11 +397,12 @@ class GameApp {
   }
 
   // Core update animation loop
-  animate() {
-    requestAnimationFrame(() => this.animate());
+  animate(timestamp) {
+    requestAnimationFrame((t) => this.animate(t));
 
-    const delta = Math.min(this.clock.getDelta(), 0.1); // Cap delta to avoid physics explosions on lag spikes
-    const time = this.clock.getElapsedTime();
+    this.timer.update(timestamp || performance.now());
+    const delta = Math.min(this.timer.getDelta(), 0.1); // Cap delta to avoid physics explosions on lag spikes
+    const time = this.timer.getElapsed();
 
     if (this.gameState === 'PLAYING') {
       // Update timer countdown
