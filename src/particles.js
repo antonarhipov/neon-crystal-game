@@ -27,10 +27,9 @@ export class ParticleSystem {
     this.scene.add(this.points);
   }
 
-  // Spawn an explosion of sparks at the target position
-  spawnExplosion(position, colorHex = 0xff00b4) {
+  // Spawn an explosion of sparks at the target position with custom count
+  spawn(position, colorHex = 0xff00b4, count = 20) {
     const pColor = new THREE.Color(colorHex);
-    const count = 35; // Number of sparks per explosion
 
     for (let i = 0; i < count; i++) {
       if (this.particles.length >= this.maxParticles) {
@@ -54,6 +53,10 @@ export class ParticleSystem {
         maxAge: 0.4 + Math.random() * 0.5 // Spark lifetime in seconds
       });
     }
+  }
+
+  spawnExplosion(position, colorHex = 0xff00b4) {
+    this.spawn(position, colorHex, 35);
   }
 
   update(delta) {
