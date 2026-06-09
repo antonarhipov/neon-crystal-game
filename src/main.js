@@ -365,7 +365,16 @@ class GameApp {
   }
 
   damageGuard(guard, index, fireDirection) {
+    // Robust defensive fallback for health properties
+    if (typeof guard.maxHealth !== 'number' || isNaN(guard.maxHealth)) {
+      guard.maxHealth = 2;
+    }
+    if (typeof guard.health !== 'number' || isNaN(guard.health)) {
+      guard.health = guard.maxHealth;
+    }
+
     guard.health--;
+    console.log(`[Combat] Drone hit! Health: ${guard.health}/${guard.maxHealth}`);
     
     // Impact pushback & visual squashing juice
     const pushDir = fireDirection.clone();
@@ -394,6 +403,7 @@ class GameApp {
       if (guard.healthTextCanvas && guard.healthTextCtx && guard.healthTextTexture) {
         const ctx = guard.healthTextCtx;
         ctx.clearRect(0, 0, 64, 32);
+        ctx.font = 'bold 20px "Courier New", monospace';
         ctx.fillStyle = '#ff3300';
         ctx.fillText('0%', 32, 16);
         guard.healthTextTexture.needsUpdate = true;
@@ -421,6 +431,7 @@ class GameApp {
         const percent = Math.round(ratio * 100);
         const ctx = guard.healthTextCtx;
         ctx.clearRect(0, 0, 64, 32);
+        ctx.font = 'bold 20px "Courier New", monospace';
         ctx.fillStyle = ratio < 0.35 ? '#ff3300' : (ratio < 0.65 ? '#ffaa00' : '#ffffff');
         ctx.fillText(percent + '%', 32, 16);
         guard.healthTextTexture.needsUpdate = true;

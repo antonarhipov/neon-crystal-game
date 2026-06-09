@@ -790,6 +790,7 @@ export class GameWorld {
 
   // 7. Create AI Guard (now with health parameters and billboarded life bar + % text)
   createGuard(patrolPoints, speed = 4.0, maxHealth = 2) {
+    const finalMaxHealth = typeof maxHealth === 'number' && !isNaN(maxHealth) ? maxHealth : 2;
     const group = new THREE.Group();
     group.position.copy(patrolPoints[0]);
     group.position.y += 1.3; // Hover altitude
@@ -869,8 +870,8 @@ export class GameWorld {
       chaseSpeed: speed * 1.85,
       
       // Health properties
-      health: maxHealth,
-      maxHealth: maxHealth,
+      health: finalMaxHealth,
+      maxHealth: finalMaxHealth,
       healthBarGroup,
       healthBarFg: fgMesh,
       healthTextCanvas: textCanvas,
