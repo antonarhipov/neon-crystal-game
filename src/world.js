@@ -925,28 +925,43 @@ export class GameWorld {
       this.createAmmoMesh(-12, 1.2, -12, 'ammo_1_1');
       this.createAmmoMesh(12, 1.2, 12, 'ammo_1_2');
       this.createAmmoMesh(0, 1.2, -16, 'ammo_1_3');
+      this.createAmmoMesh(16, 1.2, -16, 'ammo_1_4');
+      this.createAmmoMesh(-16, 1.2, 16, 'ammo_1_5');
     } else if (levelNumber === 2) {
       this.createAmmoMesh(-15, 9.2, -5, 'ammo_2_1');
       this.createAmmoMesh(15, 9.2, 5, 'ammo_2_2');
       this.createAmmoMesh(0, 1.2, -8, 'ammo_2_3');
+      this.createAmmoMesh(0, 5.2, 14, 'ammo_2_4');
+      this.createAmmoMesh(0, 12.2, -14, 'ammo_2_5');
     } else if (levelNumber === 3) {
       this.createAmmoMesh(-16, 5.2, -14, 'ammo_3_1');
       this.createAmmoMesh(16, 5.2, -14, 'ammo_3_2');
       this.createAmmoMesh(-16, 9.2, 14, 'ammo_3_3');
       this.createAmmoMesh(16, 9.2, 14, 'ammo_3_4');
+      this.createAmmoMesh(0, 12.2, 0, 'ammo_3_5');
+      this.createAmmoMesh(0, 1.2, -25, 'ammo_3_6');
     } else if (levelNumber === 4) {
       this.createAmmoMesh(-18, 7.2, 6, 'ammo_4_1');
       this.createAmmoMesh(18, 7.2, 6, 'ammo_4_2');
       this.createAmmoMesh(0, 11.2, -2, 'ammo_4_3');
+      this.createAmmoMesh(0, 11.2, 4, 'ammo_4_4');
+      this.createAmmoMesh(0, 6.2, -16, 'ammo_4_5');
+      this.createAmmoMesh(0, 1.2, 20, 'ammo_4_6');
     } else if (levelNumber === 5) {
       this.createAmmoMesh(-20, 7.2, -18, 'ammo_5_1');
       this.createAmmoMesh(20, 7.2, -18, 'ammo_5_2');
       this.createAmmoMesh(-20, 12.2, 18, 'ammo_5_3');
       this.createAmmoMesh(20, 12.2, 18, 'ammo_5_4');
+      this.createAmmoMesh(0, 1.2, 0, 'ammo_5_5');
+      this.createAmmoMesh(0, 1.2, -28, 'ammo_5_6');
+      this.createAmmoMesh(0, 1.2, 20, 'ammo_5_7');
     } else if (levelNumber === 6) {
-      this.createAmmoMesh(0, 3, 22, 'ammo_6_1');
-      this.createAmmoMesh(0, 11, -22, 'ammo_6_2');
-      this.createAmmoMesh(0, 5, 12, 'ammo_6_3');
+      this.createAmmoMesh(0, 4.2, 22, 'ammo_6_1');
+      this.createAmmoMesh(0, 12.2, -22, 'ammo_6_2');
+      this.createAmmoMesh(0, 6.2, 12, 'ammo_6_3');
+      this.createAmmoMesh(-8, 8.2, 3, 'ammo_6_4');
+      this.createAmmoMesh(8, 8.2, 3, 'ammo_6_5');
+      this.createAmmoMesh(0, 10.2, -10, 'ammo_6_6');
     }
   }
 
