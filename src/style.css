@@ -784,6 +784,47 @@ body.is-mobile .cyber-btn {
   letter-spacing: 1px;
 }
 
+#mobile-look-hint {
+  position: absolute;
+  bottom: 125px;
+  right: 30px;
+  width: 165px;
+  padding: 6px 12px;
+  border-radius: 15px;
+  border: 1px dashed rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.04);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
+  color: var(--neon-cyan);
+  text-shadow: 0 0 4px var(--neon-cyan);
+  font-size: 0.68rem;
+  font-family: 'Outfit', sans-serif;
+  text-align: center;
+  font-weight: bold;
+  pointer-events: none; /* let touch events fall through to the look zone */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: swipe-pulse 2s infinite ease-in-out;
+  z-index: 9;
+}
+
+@keyframes swipe-pulse {
+  0% {
+    opacity: 0.4;
+    box-shadow: 0 0 4px rgba(0, 240, 255, 0.05);
+    transform: scale(1.0);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 0.4;
+    box-shadow: 0 0 4px rgba(0, 240, 255, 0.05);
+    transform: scale(1.0);
+  }
+}
+
 /* Mobile landscape specific tweaks */
 @media screen and (max-height: 480px) and (orientation: landscape) {
   body.is-mobile .screen-card {
