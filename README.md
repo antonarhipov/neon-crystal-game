@@ -57,6 +57,16 @@ npm run preview
 
 Output is emitted to `dist/`.
 
+## Deploy (GitHub Pages)
+
+This repository includes a workflow at `/home/runner/work/neon-crystal-game/neon-crystal-game/antonarhipov/neon-crystal-game/.github/workflows/deploy.yml` that builds and deploys the game to GitHub Pages.
+
+1. In the GitHub repository, open **Settings → Pages**.
+2. Under **Build and deployment**, select **Source: GitHub Actions**.
+3. Push to `main` (or run the **Deploy to GitHub Pages** workflow manually).
+4. The site will be published at:
+   - `https://antonarhipov.github.io/neon-crystal-game/`
+
 ## Reachability & Path Verification
 
 The project includes an automated pathfinding and reachability verification script. It uses a Breadth-First Search (BFS) algorithm to verify that all platforms, crystals, and portals in every sector are 100% reachable under the player's physical constraints (movement speed, jump heights, elevator timings, portals, and gravity fields).
