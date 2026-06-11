@@ -2,6 +2,8 @@
 
 A 3D first-person browser game built with [Three.js](https://threejs.org/) and [Vite](https://vitejs.dev/). Navigate a neon, cyberpunk-styled grid across six sectors, collect energy crystals before the core destabilizes, dodge lasers and sentinel drones, and chain combos for high scores.
 
+![Neon Crystal Collector screenshot](neon-crystal-screenshot.png)
+
 ## Gameplay
 
 You drop into a futuristic platform suspended in deep space. Each sector requires you to collect a number of floating crystals before the **Energy Core Stability** timer runs out. Fall off the edge and the core connection is lost.
@@ -65,6 +67,7 @@ Output is emitted to `dist/`.
 │   ├── style.css       # Cyberpunk HUD styling (neon glows, glass panels)
 │   └── assets/
 ├── public/             # favicon and static SVGs
+├── neon-crystal-screenshot.png  # gameplay screenshot used in this README
 └── package.json
 ```
 

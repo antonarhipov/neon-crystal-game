@@ -486,14 +486,38 @@ export class GameWorld {
       this.buildNavigationGuides(8);
 
     } else if (levelNumber === 9) {
-      // LEVEL 9: The Hyperloop Core (Booster Rings & Final Boss)
+      // LEVEL 9: The Hyperloop Core Redesigned (Dual-Wing Platforming Route)
       this.createPlatform(0, 4, 30, 12, 0.8, 12, 0x00f0ff);       // Spawn base
       this.createPlatform(0, 10, -30, 24, 0.8, 24, 0xff00b4);     // Boss Arena platform
 
-      // Hyperloop Speed Boost Rings
-      this.createBoostRing(0, 6.5, 18, -0.15, Math.PI, 0, 2.5);               // Launches player across 40 unit gap!
-      this.createBoostRing(12, 11, -30, 0, Math.PI / 2, 0, 2.2);   // Circle path boost ring (X-axis)
-      this.createBoostRing(-12, 11, -30, 0, -Math.PI / 2, 0, 2.2); // Circle path boost ring (X-axis)
+      // Left Wing pathway (Jump -> Portal -> Elevator -> Landing -> Arena)
+      this.createPlatform(-15, 6, 20, 8, 0.8, 8, 0x00f0ff);       // Left Platform
+      this.createPlatform(-18, 8.8, 5, 8, 0.8, 8, 0xff00b4);      // Left Mid Platform (holds portal p2)
+      this.createPlatform(-14, 11, -14, 8, 0.8, 8, 0x00ffcc);     // Left High Platform
+      
+      // Right Wing pathway (Jump -> Gravity Lift -> Mid -> Moving Platform -> Landing -> Arena)
+      this.createPlatform(15, 6, 20, 8, 0.8, 8, 0x00f0ff);        // Right Platform
+      this.createPlatform(15, 8, 12, 8, 0.8, 8, 0xff00b4);        // Right Mid Platform
+      this.createPlatform(14, 11, -14, 8, 0.8, 8, 0x00ffcc);      // Right High Platform
+
+      // Moving Platforms
+      // Vertical elevator platform for Left Wing
+      this.createPlatform(-14, 8.8, -4, 4, 0.4, 4, 0xffee00, {
+        targetX: -14, targetY: 12.2, targetZ: -4, speed: 1.5
+      });
+      // Horizontal moving platform for Right Wing (Z-axis)
+      this.createPlatform(14, 11, 11, 4, 0.4, 4, 0xffee00, {
+        targetX: 14, targetY: 11, targetZ: -9, speed: 1.8
+      });
+
+      // Gravity Lift for Right Wing
+      this.createGravityLift(15, 0, 12, 2.2, 8.0);
+
+      // Portals for Left Wing
+      const p1 = this.createPortal(-15, 6.8, 20, 0x00f0ff);
+      const p2 = this.createPortal(-18, 9.6, 5, 0x00f0ff);
+      p1.targetPortalId = p2.id;
+      p2.targetPortalId = p1.id;
 
       // Boss Sentry Overseer (6 HP, stationary at center of arena)
       this.createBossOverseer(0, 12.2, -30);
@@ -645,8 +669,32 @@ export class GameWorld {
       createDashLine(new THREE.Vector3(0, 12.4, -15), new THREE.Vector3(0, 14.4, -15), 0x9900ff);
       createDashLine(new THREE.Vector3(0, 14.4, -15), new THREE.Vector3(0, 14.4, -28), 0x9900ff);
     } else if (levelNumber === 9) {
-      // LEVEL 9 Guides: Speed Boost Ring trajectory
-      createArcLine(new THREE.Vector3(0, 4.4, 30), new THREE.Vector3(0, 10.4, -30), 0x00f0ff);
+      // LEVEL 9 Guides: Left Wing and Right Wing pathways
+      
+      // -- Left Wing Pathway Guides --
+      // 1. Spawn base -> Left platform
+      createDashLine(new THREE.Vector3(0, 4.4, 30), new THREE.Vector3(-15, 6.4, 20), 0x00f0ff);
+      // 2. Left platform portal -> Left mid platform portal
+      createArcLine(new THREE.Vector3(-15, 6.8, 20), new THREE.Vector3(-18, 9.6, 5), 0x00f0ff);
+      // 3. Left mid platform -> Vertical elevator
+      createDashLine(new THREE.Vector3(-18, 9.2, 5), new THREE.Vector3(-14, 9.2, -4), 0xffee00);
+      // 4. Elevator rise -> Left high platform
+      createDashLine(new THREE.Vector3(-14, 12.4, -4), new THREE.Vector3(-14, 11.4, -14), 0x00ffcc);
+      // 5. Left high platform -> Boss Arena
+      createDashLine(new THREE.Vector3(-14, 11.4, -14), new THREE.Vector3(-12, 10.4, -18), 0xff00b4);
+
+      // -- Right Wing Pathway Guides --
+      // 1. Spawn base -> Right platform
+      createDashLine(new THREE.Vector3(0, 4.4, 30), new THREE.Vector3(15, 6.4, 20), 0x00f0ff);
+      // 2. Right platform -> Gravity lift to Right mid platform
+      createDashLine(new THREE.Vector3(15, 6.4, 20), new THREE.Vector3(15, 0.1, 12), 0x00ff66);
+      createDashLine(new THREE.Vector3(15, 0.1, 12), new THREE.Vector3(15, 8.4, 12), 0x00ff66);
+      // 3. Right mid platform -> Horizontal moving platform
+      createDashLine(new THREE.Vector3(15, 8.4, 12), new THREE.Vector3(14, 11.2, 11), 0xffee00);
+      // 4. Moving platform run -> Right high platform
+      createDashLine(new THREE.Vector3(14, 11.2, 11), new THREE.Vector3(14, 11.4, -14), 0x00ffcc);
+      // 5. Right high platform -> Boss Arena
+      createDashLine(new THREE.Vector3(14, 11.4, -14), new THREE.Vector3(12, 10.4, -18), 0xff00b4);
     }
   }
 
@@ -1107,7 +1155,9 @@ export class GameWorld {
       id,
       mesh: ammoGroup,
       basePosition: new THREE.Vector3(x, y, z),
-      bobOffset: Math.random() * Math.PI * 2
+      bobOffset: Math.random() * Math.PI * 2,
+      isActive: true,
+      respawnTimer: 0.0
     });
   }
 
@@ -1620,6 +1670,7 @@ export class GameWorld {
 
     // Bob and rotate ammo packs
     this.ammoPacks.forEach(a => {
+      if (a.isActive === false) return;
       a.mesh.rotation.y += 0.8 * delta;
       a.mesh.rotation.x += 0.4 * delta;
 
@@ -2156,9 +2207,9 @@ export class GameWorld {
   spawnCrystalsLevel9() {
     this.createCrystalMesh(0, 5.2, 30, 'crystal_9_spawn_a');
     this.createCrystalMesh(0, 5.2, 32, 'crystal_9_spawn_b');
-    this.createCrystalMesh(0, 7.2, 18, 'crystal_9_ring_a');
-    this.createCrystalMesh(0, 9.2, 6, 'crystal_9_ring_b');
-    this.createCrystalMesh(0, 11.2, -6, 'crystal_9_ring_c');
+    this.createCrystalMesh(-15, 7.2, 20, 'crystal_9_ring_a');
+    this.createCrystalMesh(15, 7.2, 20, 'crystal_9_ring_b');
+    this.createCrystalMesh(-14, 12.2, -14, 'crystal_9_ring_c');
     this.createCrystalMesh(0, 11.2, -30, 'crystal_9_boss_center');
     this.createCrystalMesh(-6, 11.2, -30, 'crystal_9_boss_l');
     this.createCrystalMesh(6, 11.2, -30, 'crystal_9_boss_r');

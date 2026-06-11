@@ -361,18 +361,35 @@ const LEVELS = {
     spawn: { x: 0, y: 5.8, z: 30 },
     platforms: [
       { id: 'spawn', minX: -6, maxX: 6, minY: 4, maxY: 4.8, minZ: 24, maxZ: 36, y: 4 },
-      { id: 'bossArena', minX: -12, maxX: 12, minY: 10, maxY: 10.8, minZ: -42, maxZ: -18, y: 10 }
+      { id: 'bossArena', minX: -12, maxX: 12, minY: 10, maxY: 10.8, minZ: -42, maxZ: -18, y: 10 },
+      // Left Wing
+      { id: 'platLeft', minX: -19, maxX: -11, minY: 6, maxY: 6.8, minZ: 16, maxZ: 24, y: 6 },
+      { id: 'platLeftMid', minX: -22, maxX: -14, minY: 8.8, maxY: 9.6, minZ: 1, maxZ: 9, y: 8.8 },
+      { id: 'platLeftHigh', minX: -18, maxX: -10, minY: 11, maxY: 11.8, minZ: -18, maxZ: -10, y: 11 },
+      // Right Wing
+      { id: 'platRight', minX: 11, maxX: 19, minY: 6, maxY: 6.8, minZ: 16, maxZ: 24, y: 6 },
+      { id: 'platRightMid', minX: 11, maxX: 19, minY: 8, maxY: 8.8, minZ: 8, maxZ: 16, y: 8 },
+      { id: 'platRightHigh', minX: 10, maxX: 18, minY: 11, maxY: 11.8, minZ: -18, maxZ: -10, y: 11 },
+      // Moving Platforms
+      { id: 'movingLeft', minX: -16, maxX: -12, minY: 8.8, maxY: 12.2, minZ: -6, maxZ: -2, y: 11 },
+      { id: 'movingRight', minX: 12, maxX: 16, minY: 11, maxY: 11.8, minZ: -10, maxZ: 12, y: 11 }
     ],
-    boostRings: [
-      // Updated speed ring to match the new pitched-up Y-aligned coordinates
-      { id: 'boost1', x: 0, y: 6.5, z: 18, radius: 2.5, direction: { x: 0, y: 0.15, z: -0.99 } }
+    portals: [
+      { id: 'portal1', targetPortalId: 'portal2', x: -15, y: 6.8, z: 20 },
+      { id: 'portal2', targetPortalId: 'portal1', x: -18, y: 9.6, z: 5 }
     ],
+    switches: [],
+    gravityLifts: [
+      { x: 15, z: 12, height: 8.0, radius: 2.2 }
+    ],
+    gravityFields: [],
+    boostRings: [],
     crystals: [
       { id: 'crystal_9_spawn_a', x: 0, y: 5.2, z: 30 },
       { id: 'crystal_9_spawn_b', x: 0, y: 5.2, z: 32 },
-      { id: 'crystal_9_ring_a', x: 0, y: 7.2, z: 18 },
-      { id: 'crystal_9_ring_b', x: 0, y: 9.2, z: 6 },
-      { id: 'crystal_9_ring_c', x: 0, y: 11.2, z: -6 },
+      { id: 'crystal_9_ring_a', x: -15, y: 7.2, z: 20 },
+      { id: 'crystal_9_ring_b', x: 15, y: 7.2, z: 20 },
+      { id: 'crystal_9_ring_c', x: -14, y: 12.2, z: -14 },
       { id: 'crystal_9_boss_center', x: 0, y: 11.2, z: -30 },
       { id: 'crystal_9_boss_l', x: -6, y: 11.2, z: -30 },
       { id: 'crystal_9_boss_r', x: 6, y: 11.2, z: -30 },
@@ -384,10 +401,6 @@ const LEVELS = {
       { id: 'crystal_9_boss_fr', x: 6, y: 11.2, z: -24 },
       { id: 'crystal_9_boss_back', x: 0, y: 11.2, z: -39 }
     ],
-    portals: [],
-    switches: [],
-    gravityLifts: [],
-    gravityFields: [],
     target: { x: 0, y: 10, z: -30 }
   }
 };

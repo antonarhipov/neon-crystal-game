@@ -25,6 +25,7 @@ export class PlayerControls {
     this.speedMultiplier = 60.0;
     this.jumpStrength = 14.0;
     this.friction = 8.0;
+    this.isBoosted = false;
 
     this.spawnPoint = new THREE.Vector3(0, this.playerHeight, 0);
 
@@ -48,6 +49,7 @@ export class PlayerControls {
     this.camera.lookAt(this.spawnPoint.x, this.spawnPoint.y, this.spawnPoint.z - 10);
     this.velocity.set(0, 0, 0);
     this.jumpCount = 0;
+    this.isBoosted = false;
   }
 
   onKeyDown(event) {
@@ -106,9 +108,10 @@ export class PlayerControls {
   update(delta, colliders = [], platforms = []) {
     if (!this.controls.isLocked) return;
 
-    // Apply friction (damping)
-    this.velocity.x -= this.velocity.x * this.friction * delta;
-    this.velocity.z -= this.velocity.z * this.friction * delta;
+    // Apply friction (damping) - lower damping only when boosted to allow boost momentum to carry player
+    const currentFriction = this.isBoosted ? 0.8 : this.friction;
+    this.velocity.x -= this.velocity.x * currentFriction * delta;
+    this.velocity.z -= this.velocity.z * currentFriction * delta;
     
     // Apply gravity
     this.velocity.y -= this.gravity * delta;
@@ -175,6 +178,7 @@ export class PlayerControls {
       this.camera.position.y = groundY + this.playerHeight;
       this.canJump = true;
       this.jumpCount = 0;
+      this.isBoosted = false;
 
       // Sync position with moving platforms
       if (standingPlatform && standingPlatform.displacement) {

@@ -356,9 +356,10 @@ class GameApp {
     this.particles.spawn(spawnPos, 0xffff00, 4);
   }
 
-  collectAmmoPack(ammoPack, index) {
-    this.scene.remove(ammoPack.mesh);
-    this.world.ammoPacks.splice(index, 1);
+  collectAmmoPack(ammoPack) {
+    ammoPack.isActive = false;
+    ammoPack.mesh.visible = false;
+    ammoPack.respawnTimer = 10.0; // 10 seconds respawn timer
     
     this.ammo += 3;
     const ammoEl = document.getElementById('ammo-count');
@@ -958,13 +959,26 @@ class GameApp {
         }
       }
 
-      // Check collision: Player camera to ammo packs
+      // Check collision: Player camera to ammo packs & update respawn timers
       const ammoPacks = this.world.getAmmoPacks();
       for (let i = ammoPacks.length - 1; i >= 0; i--) {
         const a = ammoPacks[i];
+        
+        // Handle respawning if inactive
+        if (a.isActive === false) {
+          a.respawnTimer -= delta;
+          if (a.respawnTimer <= 0) {
+            a.isActive = true;
+            a.mesh.visible = true;
+            this.particles.spawn(a.basePosition, 0xffff00, 15);
+            this.audio.playAmmoCollectSound();
+          }
+          continue;
+        }
+
         const dist = playerPos.distanceTo(a.mesh.position);
         if (dist < collectThreshold) {
-          this.collectAmmoPack(a, i);
+          this.collectAmmoPack(a);
         }
       }
 
@@ -1061,7 +1075,26 @@ class GameApp {
           }
         }
 
-        // 4. Check collision against Boss Overseer (Sector 9 Boss)
+        // 4. Check collision against Boss Homing Missiles (Sector 9)
+        if (!hit && this.world.getBossOverseer()) {
+          const boss = this.world.getBossOverseer();
+          for (let k = boss.projectiles.length - 1; k >= 0; k--) {
+            const missile = boss.projectiles[k];
+            const dist = proj.mesh.position.distanceTo(missile.mesh.position);
+            if (dist < 1.4) {
+              this.particles.spawn(missile.mesh.position, 0xff0066, 15);
+              this.audio.playGuardExplosionSound();
+              this.scene.remove(missile.mesh);
+              boss.projectiles.splice(k, 1);
+              
+              hit = true;
+              this.showScoreSplash('HYPER-MISSILE INTERCEPTED');
+              break;
+            }
+          }
+        }
+
+        // 5. Check collision against Boss Overseer (Sector 9 Boss)
         if (!hit && this.world.getBossOverseer()) {
           const boss = this.world.getBossOverseer();
           const dist = proj.mesh.position.distanceTo(boss.mesh.position);
@@ -1344,6 +1377,7 @@ class GameApp {
             
             // Apply strong forward velocity vector
             this.controls.velocity.addScaledVector(ring.direction, 45.0);
+            this.controls.isBoosted = true;
             
             // Spawn wind tunnel particles
             this.particles.spawn(ring.position, 0xffee00, 30);
@@ -1441,6 +1475,7 @@ class GameApp {
             this.controls.velocity.x = boostForce.x;
             this.controls.velocity.z = boostForce.z;
             this.controls.velocity.y = Math.max(this.controls.velocity.y, boostForce.y);
+            this.controls.isBoosted = true;
             
             this.particles.spawn(pad.position, 0x00ffcc, 15);
             break;
