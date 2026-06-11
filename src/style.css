@@ -787,24 +787,30 @@ body.is-mobile .cyber-btn {
 /* Mobile landscape specific tweaks */
 @media screen and (max-height: 480px) and (orientation: landscape) {
   body.is-mobile .screen-card {
-    padding: 15px 20px;
+    padding: 10px 20px;
     max-width: 480px;
   }
   
   body.is-mobile .cyber-title {
-    font-size: 1.5rem;
-    margin-bottom: 5px;
+    font-size: 1.2rem !important;
+    margin-bottom: 2px !important;
+    display: inline-block;
+  }
+  
+  body.is-mobile h2.cyber-title {
+    font-size: 1.2rem !important;
+    margin-top: 0 !important;
+    margin-left: 8px !important;
   }
   
   body.is-mobile .screen-desc {
-    font-size: 0.75rem;
-    margin-bottom: 8px;
+    display: none !important; /* Hide description in landscape to save height */
   }
 
   body.is-mobile .movement-banner {
-    margin: 5px 0;
+    margin: 4px 0;
     padding: 6px 10px;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 
   /* Make instructions hide or take less space in landscape to guarantee button fits */
@@ -813,9 +819,9 @@ body.is-mobile .cyber-btn {
   }
   
   body.is-mobile .cyber-btn {
-    font-size: 0.9rem;
-    padding: 8px 15px;
-    margin-top: 5px;
+    font-size: 0.85rem;
+    padding: 6px 15px;
+    margin-top: 4px;
   }
 }
 
