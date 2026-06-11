@@ -1,0 +1,17 @@
+{
+  "name": "Neon Crystal Collector",
+  "short_name": "Neon Crystal",
+  "description": "3D first-person cyberpunk platform collector game.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#000000",
+  "theme_color": "#00f0ff",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
