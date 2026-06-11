@@ -276,8 +276,13 @@ class GameApp {
     this.timeLeft = this.gameDuration;
     this.gameState = 'PLAYING';
     
+    this.controls.setSpawnPoint(0, 1.8, 0);
     this.world.loadLevel(1);
     this.controls.resetPosition();
+    this.controls.gravity = 35.0;
+    const vignette = document.getElementById('gravity-vignette');
+    if (vignette) vignette.classList.remove('active');
+    this.playerInGravityFieldLastFrame = false;
 
     // Reset HUD DOM elements
     this.scoreCountEl.textContent = '0';
@@ -373,7 +378,11 @@ class GameApp {
       guard.health = guard.maxHealth;
     }
 
-    guard.health--;
+    if (guard.isDecoy) {
+      guard.health = 0; // Decoys disintegrate in 1 hit
+    } else {
+      guard.health--;
+    }
     console.log(`[Combat] Drone hit! Health: ${guard.health}/${guard.maxHealth}`);
     
     // Impact pushback & visual squashing juice
@@ -387,16 +396,20 @@ class GameApp {
     guard.coreMesh.material.emissiveIntensity = 6.0;
 
     // Spawn damage sparks
-    this.particles.spawn(guard.mesh.position, 0xffaa00, 10);
+    this.particles.spawn(guard.mesh.position, guard.isDecoy ? 0x00f0ff : 0xffaa00, 10);
 
     if (guard.health <= 0) {
-      this.audio.playGuardExplosionSound();
-      this.particles.spawn(guard.mesh.position, 0xff3300, 24);
-      
-      this.score += 500;
-      this.totalScore += 500;
-      this.scoreCountEl.textContent = this.score;
-      this.showScoreSplash('SENTINEL DESTROYED +500');
+      if (guard.isDecoy) {
+        this.audio.playGlitchDecoySound();
+        this.particles.spawn(guard.mesh.position, 0x00f0ff, 25);
+        this.showScoreSplash('DECOY SENTINEL VAPORIZED');
+      } else {
+        this.audio.playGuardExplosionSound();
+        this.particles.spawn(guard.mesh.position, 0xff3300, 24);
+        
+        this.totalScore += 500;
+        this.showScoreSplash('SENTINEL DESTROYED +500');
+      }
 
       // Update billboard health bar graphic to 0%
       guard.healthBarFg.scale.x = 0;
@@ -487,7 +500,7 @@ class GameApp {
     // Dynamic titles
     document.getElementById('lc-title').textContent = `Sector ${this.currentLevel} Synchronized`;
     
-    if (this.currentLevel < 6) {
+    if (this.currentLevel < 9) {
       this.nextLevelBtn.textContent = 'Enter Next Sector';
     } else {
       this.nextLevelBtn.textContent = 'Finalize Core Grid';
@@ -500,7 +513,7 @@ class GameApp {
   proceedToNextLevel() {
     this.levelclearScreen.classList.add('hidden');
     
-    if (this.currentLevel === 6) {
+    if (this.currentLevel === 9) {
       this.triggerVictory();
       return;
     }
@@ -524,6 +537,15 @@ class GameApp {
     } else if (this.currentLevel === 6) {
       this.totalCrystals = 15;
       this.gameDuration = 110.0;
+    } else if (this.currentLevel === 7) {
+      this.totalCrystals = 15;
+      this.gameDuration = 120.0;
+    } else if (this.currentLevel === 8) {
+      this.totalCrystals = 15;
+      this.gameDuration = 130.0;
+    } else if (this.currentLevel === 9) {
+      this.totalCrystals = 15;
+      this.gameDuration = 145.0;
     }
 
     this.score = 0;
@@ -537,6 +559,21 @@ class GameApp {
     this.projectiles.forEach(p => this.scene.remove(p.mesh));
     this.projectiles = [];
     
+    // Configure level-specific spawn points
+    let spawnX = 0, spawnY = 1.8, spawnZ = 0;
+    if (this.currentLevel === 4) {
+      spawnX = 0; spawnY = 5.8; spawnZ = 26;
+    } else if (this.currentLevel === 6) {
+      spawnX = 0; spawnY = 4.8; spawnZ = 26;
+    } else if (this.currentLevel === 7) {
+      spawnX = 0; spawnY = 5.8; spawnZ = 26;
+    } else if (this.currentLevel === 8) {
+      spawnX = 0; spawnY = 4.8; spawnZ = 26;
+    } else if (this.currentLevel === 9) {
+      spawnX = 0; spawnY = 5.8; spawnZ = 30;
+    }
+    this.controls.setSpawnPoint(spawnX, spawnY, spawnZ);
+
     // Load next level assets
     this.world.loadLevel(this.currentLevel);
     this.controls.resetPosition();
@@ -599,11 +636,35 @@ class GameApp {
     } else if (level === 6) {
       this.totalCrystals = 15;
       this.gameDuration = 110.0;
+    } else if (level === 7) {
+      this.totalCrystals = 15;
+      this.gameDuration = 120.0;
+    } else if (level === 8) {
+      this.totalCrystals = 15;
+      this.gameDuration = 130.0;
+    } else if (level === 9) {
+      this.totalCrystals = 15;
+      this.gameDuration = 145.0;
     }
     
     this.targetCountEl.textContent = this.totalCrystals;
     document.getElementById('level-display').textContent = this.currentLevel;
     
+    // Configure level-specific spawn points
+    let spawnX = 0, spawnY = 1.8, spawnZ = 0;
+    if (level === 4) {
+      spawnX = 0; spawnY = 5.8; spawnZ = 26;
+    } else if (level === 6) {
+      spawnX = 0; spawnY = 4.8; spawnZ = 26;
+    } else if (level === 7) {
+      spawnX = 0; spawnY = 5.8; spawnZ = 26;
+    } else if (level === 8) {
+      spawnX = 0; spawnY = 4.8; spawnZ = 26;
+    } else if (level === 9) {
+      spawnX = 0; spawnY = 5.8; spawnZ = 30;
+    }
+    this.controls.setSpawnPoint(spawnX, spawnY, spawnZ);
+
     this.gameState = 'PLAYING';
     this.world.loadLevel(level);
     this.controls.resetPosition();
@@ -681,6 +742,7 @@ class GameApp {
     this.totalScore += points;
 
     // Check level clear
+    console.log(`[Crystal Collected] score: ${this.score}, target: ${this.totalCrystals}, currentLevel: ${this.currentLevel}`);
     if (this.score >= this.totalCrystals) {
       this.triggerLevelClear();
     }
@@ -914,7 +976,8 @@ class GameApp {
         proj.mesh.position.addScaledVector(proj.direction, proj.speed * delta);
 
         let hit = false;
-        // Check collision against guards
+        
+        // 1. Check collision against guards
         for (let j = guards.length - 1; j >= 0; j--) {
           const guard = guards[j];
           if (guard.isEvaporating) continue; // Skip evaporating guards
@@ -923,6 +986,140 @@ class GameApp {
             this.damageGuard(guard, j, proj.direction);
             hit = true;
             break;
+          }
+        }
+
+        // 2. Check collision against interactive switches (Sector 7 Switches)
+        if (!hit) {
+          const switches = this.world.getSwitches();
+          for (let j = switches.length - 1; j >= 0; j--) {
+            const sw = switches[j];
+            if (sw.isActive) continue;
+            // Switch target position is the floating core at pedestal height
+            const swPos = sw.mesh.position.clone();
+            swPos.y += 0.95;
+            const dist = proj.mesh.position.distanceTo(swPos);
+            if (dist < 1.5) {
+              sw.isActive = true;
+              sw.switchMesh.material.color.setHex(0x00ff00); // Set to green
+              sw.switchMesh.material.emissive.setHex(0x00ff00);
+              this.audio.playAmmoCollectSound(); // Play chime beep sound
+              
+              // Toggle matching phase platforms
+              const platforms = this.world.getPlatforms();
+              const p = platforms.find(plat => plat.isPhasePlatform && plat.phaseId === sw.targetId);
+              if (p) {
+                p.isActive = true;
+                p.mesh.visible = true;
+                p.edgeLines.material.color.setHex(p.originalColor);
+                // restore collision parameters
+                p.minX = p.mesh.position.x - p.width / 2;
+                p.maxX = p.mesh.position.x + p.width / 2;
+                p.minZ = p.mesh.position.z - p.depth / 2;
+                p.maxZ = p.mesh.position.z + p.depth / 2;
+                this.particles.spawn(p.mesh.position, p.originalColor, 20);
+              }
+              hit = true;
+              break;
+            }
+          }
+        }
+
+        // 3. Check collision against destructible barriers (Sector 8 Barriers)
+        if (!hit) {
+          const barriers = this.world.getBarriers();
+          for (let j = barriers.length - 1; j >= 0; j--) {
+            const b = barriers[j];
+            const px = proj.mesh.position.x;
+            const py = proj.mesh.position.y;
+            const pz = proj.mesh.position.z;
+            
+            if (px >= b.minX - 0.25 && px <= b.maxX + 0.25 &&
+                pz >= b.minZ - 0.25 && pz <= b.maxZ + 0.25 &&
+                py >= b.minY - 0.25 && py <= b.maxY + 0.25) {
+              
+              b.health--;
+              this.particles.spawn(proj.mesh.position, 0xff00ff, 15);
+              this.audio.playGuardDamageSound();
+
+              if (b.health <= 0) {
+                // Shatter barrier
+                this.audio.playBarrierBreakSound();
+                this.particles.spawn(b.mesh.position, 0xff00ff, 35);
+                this.scene.remove(b.mesh);
+                barriers.splice(j, 1);
+              } else {
+                b.mesh.material.opacity = 0.8;
+                setTimeout(() => { b.mesh.material.opacity = 0.35; }, 100);
+              }
+              hit = true;
+              break;
+            }
+          }
+        }
+
+        // 4. Check collision against Boss Overseer (Sector 9 Boss)
+        if (!hit && this.world.getBossOverseer()) {
+          const boss = this.world.getBossOverseer();
+          const dist = proj.mesh.position.distanceTo(boss.mesh.position);
+          if (dist < 3.8) {
+            // Check rotation segment to see if shield blocks or passes to core
+            const dx = proj.mesh.position.x - boss.mesh.position.x;
+            const dz = proj.mesh.position.z - boss.mesh.position.z;
+            const localAngle = Math.atan2(dz, dx) - boss.shieldMesh.rotation.y;
+            const normAngle = ((localAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+            const halfShieldWidth = Math.PI * 0.25; // Shield size segments
+            const hitsShield1 = normAngle <= halfShieldWidth || normAngle >= Math.PI * 2 - halfShieldWidth;
+            const hitsShield2 = Math.abs(normAngle - Math.PI) <= halfShieldWidth;
+
+            if ((hitsShield1 || hitsShield2) && dist > 2.0) {
+              // Hit shield! Deflect shot
+              this.particles.spawn(proj.mesh.position, 0x00f0ff, 8);
+              this.audio.playLaserHitSound();
+            } else {
+              // Pass shield! Damage boss core
+              boss.health--;
+              boss.damageIntensity = 1.0;
+              this.particles.spawn(proj.mesh.position, 0xff0066, 20);
+
+              if (boss.health <= 0) {
+                this.audio.playGuardExplosionSound();
+                this.particles.spawn(boss.mesh.position, 0xff0066, 60);
+                this.showScoreSplash('NEXUS OVERSEER ELIMINATED +2500');
+                this.totalScore += 2500;
+
+                // Chain explosions
+                let delay = 0;
+                for (let k = 0; k < 6; k++) {
+                  setTimeout(() => {
+                    const offset = new THREE.Vector3((Math.random() - 0.5) * 5.0, (Math.random() - 0.5) * 5.0, (Math.random() - 0.5) * 5.0);
+                    this.particles.spawn(boss.mesh.position.clone().add(offset), 0xff0066, 20);
+                    this.audio.playGuardExplosionSound();
+                  }, delay);
+                  delay += 120;
+                }
+
+                // Evaporate boss overseer
+                this.scene.remove(boss.mesh);
+                this.world.bossOverseer = null;
+              } else {
+                this.audio.playGuardDamageSound();
+                
+                // Update health text HUD
+                const ratio = Math.max(0, boss.health / boss.maxHealth);
+                boss.healthBarFg.scale.x = ratio;
+                if (boss.healthTextCanvas && boss.healthTextCtx && boss.healthTextTexture) {
+                  const ctx = boss.healthTextCtx;
+                  ctx.clearRect(0, 0, 128, 48);
+                  ctx.font = 'bold 24px "Courier New", monospace';
+                  ctx.fillStyle = '#ffffff';
+                  ctx.fillText(Math.round(ratio * 100) + '%', 64, 24);
+                  boss.healthTextTexture.needsUpdate = true;
+                }
+              }
+            }
+            hit = true;
           }
         }
 
@@ -1050,6 +1247,174 @@ class GameApp {
         }
       }
 
+      // Check gravity fields (Sector 8)
+      const gravityFields = this.world.getGravityFields();
+      let inGravityField = false;
+      for (const field of gravityFields) {
+        if (playerPos.x >= field.minX && playerPos.x <= field.maxX &&
+            playerPos.z >= field.minZ && playerPos.z <= field.maxZ &&
+            playerPos.y >= field.minY && playerPos.y <= field.maxY) {
+          inGravityField = true;
+          break;
+        }
+      }
+
+      if (inGravityField) {
+        if (!this.playerInGravityFieldLastFrame) {
+          this.audio.playGravityInvertSound();
+          this.playerInGravityFieldLastFrame = true;
+        }
+        this.controls.gravity = -24.0;
+        this.controls.jumpCount = 0; // Reload double jump
+        const vignette = document.getElementById('gravity-vignette');
+        if (vignette) vignette.classList.add('active');
+      } else {
+        if (this.playerInGravityFieldLastFrame) {
+          this.playerInGravityFieldLastFrame = false;
+        }
+        this.controls.gravity = 35.0; // Restore default gravity
+        const vignette = document.getElementById('gravity-vignette');
+        if (vignette) vignette.classList.remove('active');
+      }
+
+      const barriers = this.world.getBarriers();
+      for (const b of barriers) {
+        // Check y-overlap first
+        const yOverlap = playerPos.y >= b.minY && (playerPos.y - playerHeight) <= b.maxY;
+        if (!yOverlap) continue;
+
+        // Check x-overlap
+        const xOverlap = (playerPos.x + playerRadius) >= b.minX && (playerPos.x - playerRadius) <= b.maxX;
+        if (!xOverlap) continue;
+
+        // Check z-overlap
+        const zOverlap = (playerPos.z + playerRadius) >= b.minZ && (playerPos.z - playerRadius) <= b.maxZ;
+        if (!zOverlap) continue;
+
+        // Overlapping! Calculate how deep the penetration is on each axis
+        const distToMinX = Math.abs((playerPos.x + playerRadius) - b.minX);
+        const distToMaxX = Math.abs(b.maxX - (playerPos.x - playerRadius));
+        const minPenX = Math.min(distToMinX, distToMaxX);
+
+        const distToMinZ = Math.abs((playerPos.z + playerRadius) - b.minZ);
+        const distToMaxZ = Math.abs(b.maxZ - (playerPos.z - playerRadius));
+        const minPenZ = Math.min(distToMinZ, distToMaxZ);
+
+        // Push along the shortest axis
+        if (minPenX < minPenZ) {
+          if (distToMinX < distToMaxX) {
+            playerPos.x -= minPenX;
+          } else {
+            playerPos.x += minPenX;
+          }
+          this.controls.velocity.x = 0;
+        } else {
+          if (distToMinZ < distToMaxZ) {
+            playerPos.z -= minPenZ;
+          } else {
+            playerPos.z += minPenZ;
+          }
+          this.controls.velocity.z = 0;
+        }
+      }
+
+      // Check player-boost rings intersections (Sector 9)
+      const boostRings = this.world.getBoostRings();
+      for (const ring of boostRings) {
+        ring.cooldown = ring.cooldown || 0;
+        if (ring.cooldown > 0) {
+          ring.cooldown -= delta;
+        } else {
+          const toPlayer = new THREE.Vector3().subVectors(playerPos, ring.position);
+          const distAlongNormal = toPlayer.dot(ring.direction);
+          const perpDistVec = new THREE.Vector3().subVectors(toPlayer, ring.direction.clone().multiplyScalar(distAlongNormal));
+          const distPerp = perpDistVec.length();
+
+          if (Math.abs(distAlongNormal) < 2.0 && distPerp < ring.radius + 0.5) {
+            ring.cooldown = 1.2; // 1.2s cooldown
+            this.audio.playBoosterSound();
+            this.showScoreSplash('HYPERLOOP ACCELERATION');
+            
+            // Apply strong forward velocity vector
+            this.controls.velocity.addScaledVector(ring.direction, 45.0);
+            
+            // Spawn wind tunnel particles
+            this.particles.spawn(ring.position, 0xffee00, 30);
+          }
+        }
+      }
+
+      // Update Boss Overseer combat loops (Sector 9)
+      const boss = this.world.getBossOverseer();
+      if (boss) {
+        boss.shootCooldown -= delta;
+        if (boss.shootCooldown <= 0) {
+          boss.shootCooldown = 2.0 + Math.random() * 1.5;
+          this.audio.playBossHomingSound();
+
+          // Spawn glowing homing sphere
+          const missileGeo = new THREE.SphereGeometry(0.35, 8, 8);
+          const missileMat = new THREE.MeshBasicMaterial({
+            color: 0xff0066,
+            transparent: true,
+            opacity: 0.95
+          });
+          const missileMesh = new THREE.Mesh(missileGeo, missileMat);
+          
+          const missileEdges = new THREE.EdgesGeometry(missileGeo);
+          const missileLineMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
+          const missileLines = new THREE.LineSegments(missileEdges, missileLineMat);
+          missileMesh.add(missileLines);
+          
+          missileMesh.position.copy(boss.mesh.position);
+          this.scene.add(missileMesh);
+          
+          boss.projectiles.push({
+            mesh: missileMesh,
+            velocity: new THREE.Vector3(0, 0, 0),
+            speed: 9.0,
+            life: 6.0
+          });
+        }
+
+        // Update Boss projectiles
+        for (let k = boss.projectiles.length - 1; k >= 0; k--) {
+          const p = boss.projectiles[k];
+          p.life -= delta;
+          if (p.life <= 0) {
+            this.scene.remove(p.mesh);
+            boss.projectiles.splice(k, 1);
+            continue;
+          }
+
+          const targetDir = new THREE.Vector3().subVectors(playerPos, p.mesh.position).normalize();
+          if (p.velocity.lengthSq() === 0) {
+            p.velocity.copy(targetDir);
+          } else {
+            p.velocity.lerp(targetDir, 3.5 * delta).normalize();
+          }
+
+          p.mesh.position.addScaledVector(p.velocity, p.speed * delta);
+          this.particles.spawn(p.mesh.position, 0xff0066, 2);
+
+          const distToPlayer = p.mesh.position.distanceTo(playerPos);
+          if (distToPlayer < 1.6) {
+            this.audio.playGuardHitSound();
+            this.timeLeft = Math.max(0, this.timeLeft - 15.0);
+            this.showPenaltySplash('-15.0s HYPER-MISSILE IMPACT');
+            
+            const pushBack = new THREE.Vector3().subVectors(playerPos, p.mesh.position);
+            pushBack.y = 0.2;
+            pushBack.normalize();
+            this.controls.velocity.addScaledVector(pushBack, 15.0);
+
+            this.particles.spawn(p.mesh.position, 0xff0066, 18);
+            this.scene.remove(p.mesh);
+            boss.projectiles.splice(k, 1);
+          }
+        }
+      }
+
       // Check velocity booster pads
       if (this.velocityPadCooldown === undefined) this.velocityPadCooldown = 0;
       if (this.velocityPadCooldown > 0) {
@@ -1159,6 +1524,11 @@ class GameApp {
         g.healthBarGroup.quaternion.copy(camera.quaternion);
       }
     });
+
+    const boss = this.world.getBossOverseer();
+    if (boss && boss.healthBarGroup) {
+      boss.healthBarGroup.quaternion.copy(camera.quaternion);
+    }
 
     this.particles.update(delta);
     this.drawRadar(time);

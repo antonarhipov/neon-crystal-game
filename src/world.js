@@ -18,6 +18,14 @@ export class GameWorld {
     this.searchlights = [];
     this.sweepers = [];
     this.isAlarmActive = false;
+
+    // Collections for Sectors 7, 8, 9
+    this.switches = [];
+    this.phasePlatforms = [];
+    this.gravityFields = [];
+    this.barriers = [];
+    this.boostRings = [];
+    this.bossOverseer = null;
     
     this.monolithMeshes = []; 
     this.platformSize = 80;   
@@ -92,6 +100,37 @@ export class GameWorld {
       this.scene.remove(sw.mesh);
     });
     this.sweepers = [];
+
+    // Clear Sectors 7, 8, 9 entities
+    this.switches.forEach(s => this.scene.remove(s.mesh));
+    this.switches = [];
+
+    this.phasePlatforms.forEach(p => this.scene.remove(p.mesh));
+    this.phasePlatforms = [];
+
+    this.gravityFields.forEach(f => {
+      this.scene.remove(f.mesh);
+      if (f.particlesGroup) this.scene.remove(f.particlesGroup);
+    });
+    this.gravityFields = [];
+
+    this.barriers.forEach(b => {
+      this.scene.remove(b.mesh);
+    });
+    this.barriers = [];
+
+    this.boostRings.forEach(r => this.scene.remove(r.mesh));
+    this.boostRings = [];
+
+    if (this.bossOverseer) {
+      this.scene.remove(this.bossOverseer.mesh);
+      if (this.bossOverseer.shieldMesh) this.scene.remove(this.bossOverseer.shieldMesh);
+      if (this.bossOverseer.projectiles) {
+        this.bossOverseer.projectiles.forEach(p => this.scene.remove(p.mesh));
+      }
+      this.bossOverseer = null;
+    }
+
     this.isAlarmActive = false;
 
     // Clear guides meshes
@@ -279,19 +318,19 @@ export class GameWorld {
       ]);
 
       // Platforms
-      this.createPlatform(-20, 6, -20, 12, 0.8, 12, 0x00f0ff);    // Corner plat 1
-      this.createPlatform(20, 6, -20, 12, 0.8, 12, 0x00f0ff);     // Corner plat 2
-      this.createPlatform(-20, 11, 20, 12, 0.8, 12, 0xff00b4);    // High corner plat 3
-      this.createPlatform(20, 11, 20, 12, 0.8, 12, 0xff00b4);     // High corner plat 4
+      this.createPlatform(-18, 6, -18, 12, 0.8, 12, 0x00f0ff);    // Corner plat 1
+      this.createPlatform(18, 6, -18, 12, 0.8, 12, 0x00f0ff);     // Corner plat 2
+      this.createPlatform(-18, 11, 18, 12, 0.8, 12, 0xff00b4);    // High corner plat 3
+      this.createPlatform(18, 11, 18, 12, 0.8, 12, 0xff00b4);     // High corner plat 4
       
       // Portals
-      const p1 = this.createPortal(-20, 6.8, -20, 0xff00b4);
-      const p2 = this.createPortal(20, 11.8, 20, 0xff00b4);
+      const p1 = this.createPortal(-18, 6.8, -18, 0xff00b4);
+      const p2 = this.createPortal(18, 11.8, 18, 0xff00b4);
       p1.targetPortalId = p2.id;
       p2.targetPortalId = p1.id;
 
-      const p3 = this.createPortal(20, 6.8, -20, 0x00f0ff);
-      const p4 = this.createPortal(-20, 11.8, 20, 0x00f0ff);
+      const p3 = this.createPortal(18, 6.8, -18, 0x00f0ff);
+      const p4 = this.createPortal(-18, 11.8, 18, 0x00f0ff);
       p3.targetPortalId = p4.id;
       p4.targetPortalId = p3.id;
 
@@ -345,6 +384,122 @@ export class GameWorld {
 
       this.spawnCrystalsLevel6();
       this.buildNavigationGuides(6);
+    } else if (levelNumber === 7) {
+      // LEVEL 7: Shifting Hologram Grid (Switches & Decoys)
+      this.createMonoliths([
+        { x: -25, z: -25, r: 2.0, h: 14 },
+        { x: 25, z: -25, r: 2.0, h: 14 },
+        { x: -25, z: 25, r: 2.0, h: 14 },
+        { x: 25, z: 25, r: 2.0, h: 14 }
+      ]);
+
+      // Spawn Static Platforms
+      this.createPlatform(0, 4, 26, 10, 0.8, 10, 0x00f0ff);       // Spawn Base
+      this.createPlatform(-18, 6, 10, 6, 0.8, 6, 0xff00b4);       // Switch 1 Platform
+      this.createPlatform(18, 8, -10, 6, 0.8, 6, 0xff00b4);       // Switch 2 Platform
+      this.createPlatform(0, 11, -32, 10, 0.8, 10, 0xffee00);     // Target platform
+
+      // Z-axis stepping stones (make platforms reachable)
+      this.createPlatform(0, 5, 17, 4, 0.6, 4, 0x00f0ff);         // Static stepping platform 1
+      this.createPhasePlatform(0, 6, 8.5, 4, 0.6, 4, 0x00ffcc, 'phase1'); // Phased stepping platform 2
+      this.createPlatform(0, 8, -8, 4, 0.6, 4, 0x00f0ff);         // Static stepping platform 3
+      this.createPhasePlatform(0, 10, -24, 4, 0.6, 4, 0x00ffcc, 'phase2'); // Phased stepping platform 4
+
+      // Phase Platforms (controlled by switches)
+      this.createPhasePlatform(0, 7, 0, 8, 0.8, 8, 0x00ffcc, 'phase1');
+      this.createPhasePlatform(0, 9, -16, 8, 0.8, 8, 0x00ffcc, 'phase2');
+
+      // Switches
+      this.createSwitch(-18, 6.8, 10, 'switch1', 'phase1');
+      this.createSwitch(18, 8.8, -10, 'switch2', 'phase2');
+
+      // Portals for Switch Platforms
+      const p1 = this.createPortal(-3, 4.8, 26, 0x00f0ff);
+      const p2 = this.createPortal(-18, 6.8, 10, 0x00f0ff);
+      p1.targetPortalId = p2.id;
+      p2.targetPortalId = p1.id;
+
+      const p3 = this.createPortal(3, 7.8, 0, 0xff00b4);
+      const p4 = this.createPortal(18, 8.8, -10, 0xff00b4);
+      p3.targetPortalId = p4.id;
+      p4.targetPortalId = p3.id;
+
+      // Guards (Patrol Drones & Holographic Decoys)
+      // Real Sentry drone
+      this.createGuard([
+        { x: -16, y: 0, z: -10 },
+        { x: 16, y: 0, z: -10 }
+      ], 4.2, 2);
+
+      // Decoy 1 (patrolling around Spawn platform)
+      this.createGuard([
+        { x: -10, y: 4, z: 20 },
+        { x: 10, y: 4, z: 20 }
+      ], 3.5, 1);
+      this.guards[this.guards.length - 1].isDecoy = true;
+
+      // Decoy 2 (patrolling around Target platform)
+      this.createGuard([
+        { x: -8, y: 11, z: -28 },
+        { x: 8, y: 11, z: -28 }
+      ], 4.0, 1);
+      this.guards[this.guards.length - 1].isDecoy = true;
+
+      this.spawnCrystalsLevel7();
+      this.buildNavigationGuides(7);
+
+    } else if (levelNumber === 8) {
+      // LEVEL 8: Gravitational Nexus (Gravity fields & destructible barriers)
+      this.createMonoliths([
+        { x: -20, z: -20, r: 1.8, h: 25 },
+        { x: 20, z: -20, r: 1.8, h: 25 },
+        { x: 0, z: 25, r: 2.2, h: 12 }
+      ]);
+
+      // Platforms
+      this.createPlatform(0, 3, 26, 10, 0.8, 10, 0x00f0ff);       // Spawn platform
+      this.createPlatform(-15, 4, 10, 8, 0.8, 8, 0xff00b4);       // Platform A (Low)
+      this.createPlatform(0, 22, 0, 14, 0.8, 14, 0xffee00);       // Platform B (High ceiling)
+      this.createPlatform(15, 12, -10, 8, 0.8, 8, 0xff00b4);      // Platform C (Mid)
+      this.createPlatform(0, 14, -28, 10, 0.8, 10, 0x00f0ff);      // Target Platform
+
+      // Gravity Inversion Fields (Floats player up to high platforms)
+      this.createGravityField(0, 3, 10, 8, 19, 8);                 // Field 1 (Floor to ceiling platform)
+      this.createGravityField(0, 0, -15, 8, 14, 8);                // Field 2 (Floor to Target platform)
+
+      // Destructible Force Barriers
+      this.createBarrier(-15, 4, 6, 8, 4, 0.5);                   // Barrier 1 (Low deck)
+      this.createBarrier(0, 22.8, -6, 14, 4, 0.5);                 // Barrier 2 (Ceiling deck)
+
+      // Guards
+      this.createGuard([
+        { x: -15, y: 4, z: 12 },
+        { x: -15, y: 4, z: -2 }
+      ], 4.0, 2);
+
+      this.createGuard([
+        { x: -5, y: 22.8, z: 0 },
+        { x: 5, y: 22.8, z: 0 }
+      ], 4.2, 2);
+
+      this.spawnCrystalsLevel8();
+      this.buildNavigationGuides(8);
+
+    } else if (levelNumber === 9) {
+      // LEVEL 9: The Hyperloop Core (Booster Rings & Final Boss)
+      this.createPlatform(0, 4, 30, 12, 0.8, 12, 0x00f0ff);       // Spawn base
+      this.createPlatform(0, 10, -30, 24, 0.8, 24, 0xff00b4);     // Boss Arena platform
+
+      // Hyperloop Speed Boost Rings
+      this.createBoostRing(0, 6.5, 18, -0.15, Math.PI, 0, 2.5);               // Launches player across 40 unit gap!
+      this.createBoostRing(12, 11, -30, 0, Math.PI / 2, 0, 2.2);   // Circle path boost ring (X-axis)
+      this.createBoostRing(-12, 11, -30, 0, -Math.PI / 2, 0, 2.2); // Circle path boost ring (X-axis)
+
+      // Boss Sentry Overseer (6 HP, stationary at center of arena)
+      this.createBossOverseer(0, 12.2, -30);
+
+      this.spawnCrystalsLevel9();
+      this.buildNavigationGuides(9);
     }
 
     // Spawn ammunition packs across all levels
@@ -456,6 +611,42 @@ export class GameWorld {
       createDashLine(new THREE.Vector3(-8, 7.8, 3), new THREE.Vector3(0, 9.8, -10), 0xff00ff);
       createDashLine(new THREE.Vector3(8, 7.8, 3), new THREE.Vector3(0, 9.8, -10), 0xff00ff);
       createDashLine(new THREE.Vector3(0, 9.8, -10), new THREE.Vector3(0, 11.8, -26), 0xff00ff);
+    } else if (levelNumber === 7) {
+      // LEVEL 7 Guides: Hologram grid, switches, stepping stones, and portal warps
+      // Portal 1 (Cyan) Warp to Switch 1 platform
+      createArcLine(new THREE.Vector3(-3, 4.8, 26), new THREE.Vector3(-18, 6.8, 10), 0x00f0ff);
+      
+      // Step stones to Phase Platform 1
+      createDashLine(new THREE.Vector3(0, 4.4, 26), new THREE.Vector3(0, 5.3, 17), 0x00ffcc);
+      createDashLine(new THREE.Vector3(0, 5.3, 17), new THREE.Vector3(0, 6.3, 8.5), 0x00ffcc);
+      createDashLine(new THREE.Vector3(0, 6.3, 8.5), new THREE.Vector3(0, 7.4, 0), 0x00ffcc);
+
+      // Portal 3 (Magenta) Warp to Switch 2 platform
+      createArcLine(new THREE.Vector3(3, 7.8, 0), new THREE.Vector3(18, 8.8, -10), 0xff00b4);
+
+      // Step stones to Phase Platform 2 and Target platform
+      createDashLine(new THREE.Vector3(0, 7.4, 0), new THREE.Vector3(0, 8.3, -8), 0x00ffcc);
+      createDashLine(new THREE.Vector3(0, 8.3, -8), new THREE.Vector3(0, 9.4, -16), 0x00ffcc);
+      createDashLine(new THREE.Vector3(0, 9.4, -16), new THREE.Vector3(0, 10.3, -24), 0x00ffcc);
+      createDashLine(new THREE.Vector3(0, 10.3, -24), new THREE.Vector3(0, 11.4, -32), 0x00ffcc);
+    } else if (levelNumber === 8) {
+      // LEVEL 8 Guides: Gravitational fields and dropdowns
+      // Spawn into Gravity field 1 -> Platform B (High)
+      createDashLine(new THREE.Vector3(0, 3.4, 26), new THREE.Vector3(0, 3.4, 10), 0x9900ff);
+      createDashLine(new THREE.Vector3(0, 3.4, 10), new THREE.Vector3(0, 22.4, 10), 0x9900ff);
+      createDashLine(new THREE.Vector3(0, 22.4, 10), new THREE.Vector3(0, 22.4, 0), 0x9900ff);
+
+      // High Platform B dropdowns to Low Platform A and Mid Platform C
+      createDashLine(new THREE.Vector3(0, 22.4, 0), new THREE.Vector3(-15, 4.4, 10), 0xff00b4);
+      createDashLine(new THREE.Vector3(0, 22.4, 0), new THREE.Vector3(15, 12.4, -10), 0xff00b4);
+
+      // Platform C jump into Gravity field 2 -> Target Platform
+      createDashLine(new THREE.Vector3(15, 12.4, -10), new THREE.Vector3(0, 12.4, -15), 0x9900ff);
+      createDashLine(new THREE.Vector3(0, 12.4, -15), new THREE.Vector3(0, 14.4, -15), 0x9900ff);
+      createDashLine(new THREE.Vector3(0, 14.4, -15), new THREE.Vector3(0, 14.4, -28), 0x9900ff);
+    } else if (levelNumber === 9) {
+      // LEVEL 9 Guides: Speed Boost Ring trajectory
+      createArcLine(new THREE.Vector3(0, 4.4, 30), new THREE.Vector3(0, 10.4, -30), 0x00f0ff);
     }
   }
 
@@ -919,6 +1110,296 @@ export class GameWorld {
     });
   }
 
+  // 8. Create interactive switch for Sector 7
+  createSwitch(x, y, z, id, targetId) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+
+    // Pedestal base
+    const baseGeo = new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.4, metalness: 0.8 });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.y = 0.4;
+    group.add(baseMesh);
+
+    // Glowing switch core (Octahedron)
+    const switchGeo = new THREE.OctahedronGeometry(0.24, 0);
+    const switchMat = new THREE.MeshStandardMaterial({
+      color: 0xff0033,
+      emissive: 0xff0033,
+      emissiveIntensity: 1.8,
+      roughness: 0.1,
+      metalness: 0.9
+    });
+    const switchMesh = new THREE.Mesh(switchGeo, switchMat);
+    switchMesh.position.set(0, 0.95, 0);
+    group.add(switchMesh);
+
+    this.scene.add(group);
+
+    this.switches.push({
+      id,
+      targetId,
+      isActive: false,
+      mesh: group,
+      switchMesh: switchMesh
+    });
+  }
+
+  // 9. Create phase platform for Sector 7
+  createPhasePlatform(x, y, z, width, height, depth, color = 0x00f0ff, id) {
+    this.createPlatform(x, y, z, width, height, depth, color);
+    const p = this.platforms[this.platforms.length - 1];
+    p.isPhasePlatform = true;
+    p.phaseId = id;
+    p.isActive = false; // Starts inactive/invisible
+    p.mesh.visible = false;
+    p.minX = 99999;
+    p.maxX = 99999;
+    p.minZ = 99999;
+    p.maxZ = 99999;
+    p.originalColor = color;
+  }
+
+  // 10. Create low-gravity inversion fields for Sector 8
+  createGravityField(x, y, z, width, height, depth) {
+    const geo = new THREE.BoxGeometry(width, height, depth);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x9900ff,
+      transparent: true,
+      opacity: 0.1,
+      depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y + height / 2, z);
+    this.scene.add(mesh);
+
+    // Glowing purple wireframe outline
+    const edges = new THREE.EdgesGeometry(geo);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xbd00ff, linewidth: 1 });
+    const edgeLines = new THREE.LineSegments(edges, lineMat);
+    mesh.add(edgeLines);
+
+    // Particle emitter setup for gravity field
+    const particlesGroup = new THREE.Group();
+    const partGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+    const partMat = new THREE.MeshBasicMaterial({ color: 0xbd00ff, transparent: true, opacity: 0.7 });
+    const localParts = [];
+    
+    for (let i = 0; i < 12; i++) {
+      const pMesh = new THREE.Mesh(partGeo, partMat);
+      const px = (Math.random() - 0.5) * (width - 0.5);
+      const py = (Math.random() - 0.5) * (height - 0.5);
+      const pz = (Math.random() - 0.5) * (depth - 0.5);
+      pMesh.position.set(px, py, pz);
+      particlesGroup.add(pMesh);
+      localParts.push({
+        mesh: pMesh,
+        speed: 1.0 + Math.random() * 1.5,
+        startY: -height / 2,
+        endY: height / 2
+      });
+    }
+    mesh.add(particlesGroup);
+
+    this.gravityFields.push({
+      mesh,
+      minX: x - width / 2,
+      maxX: x + width / 2,
+      minZ: z - depth / 2,
+      maxZ: z + depth / 2,
+      minY: y,
+      maxY: y + height,
+      particles: localParts,
+      particlesGroup
+    });
+  }
+
+  // 11. Create destructible force barriers for Sector 8
+  createBarrier(x, y, z, width, height, depth, color = 0xff00cc) {
+    const geo = new THREE.BoxGeometry(width, height, depth);
+    const mat = new THREE.MeshStandardMaterial({
+      color: color,
+      emissive: color,
+      emissiveIntensity: 0.8,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y + height / 2, z);
+    this.scene.add(mesh);
+
+    // Glowing border outline
+    const edges = new THREE.EdgesGeometry(geo);
+    const lineMat = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+    const edgeLines = new THREE.LineSegments(edges, lineMat);
+    mesh.add(edgeLines);
+
+    this.barriers.push({
+      mesh,
+      minX: x - width / 2,
+      maxX: x + width / 2,
+      minZ: z - depth / 2,
+      maxZ: z + depth / 2,
+      minY: y,
+      maxY: y + height,
+      health: 3,
+      maxHealth: 3
+    });
+  }
+
+  // 12. Create speed boost rings for Sector 9
+  createBoostRing(x, y, z, rx, ry, rz, radius = 2.4) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.rotation.set(rx, ry, rz);
+
+    // Neon booster ring (Torus)
+    const ringGeo = new THREE.TorusGeometry(radius, 0.16, 8, 32);
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: 0xffee00,
+      emissive: 0xffee00,
+      emissiveIntensity: 2.0,
+      side: THREE.DoubleSide
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    group.add(ringMesh);
+
+    // Pulse core overlay indicators (arrows pointing forward)
+    const arrowGeo = new THREE.ConeGeometry(0.25, 0.5, 4);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffee00, transparent: true, opacity: 0.8 });
+    
+    // Add 4 arrows around the ring pointing in local Z forward direction
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI) / 2;
+      const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+      arrow.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+      arrow.rotation.x = Math.PI / 2; // Point forward along local Z
+      arrow.rotation.z = -angle;
+      group.add(arrow);
+    }
+
+    this.scene.add(group);
+
+    // Calculate local Z direction vector in world space
+    const dirVec = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(rx, ry, rz)).normalize();
+
+    this.boostRings.push({
+      mesh: group,
+      position: new THREE.Vector3(x, y, z),
+      direction: dirVec,
+      radius: radius
+    });
+  }
+
+  // 13. Create Boss Overseer for Sector 9
+  createBossOverseer(x, y, z) {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+
+    // Core body (Large Octahedron)
+    const coreGeo = new THREE.OctahedronGeometry(1.6, 0);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0xff0066,
+      emissive: 0xff0066,
+      emissiveIntensity: 1.8,
+      roughness: 0.1,
+      metalness: 0.9
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    group.add(coreMesh);
+
+    // Outer wireframe shell
+    const outerGeo = new THREE.OctahedronGeometry(2.6, 0);
+    const outerMat = new THREE.MeshStandardMaterial({
+      color: 0x00f0ff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.6
+    });
+    const outerMesh = new THREE.Mesh(outerGeo, outerMat);
+    group.add(outerMesh);
+
+    // Shield mesh rings rotating around core
+    const shieldGroup = new THREE.Group();
+    
+    // Create Curved protective shield plates
+    const shieldGeo = new THREE.TorusGeometry(3.0, 0.25, 8, 16, Math.PI * 0.45);
+    const shieldMat = new THREE.MeshStandardMaterial({
+      color: 0x00f0ff,
+      emissive: 0x00f0ff,
+      emissiveIntensity: 2.5,
+      side: THREE.DoubleSide
+    });
+
+    const shield1 = new THREE.Mesh(shieldGeo, shieldMat);
+    shield1.rotation.x = Math.PI / 2;
+    shieldGroup.add(shield1);
+
+    const shield2 = new THREE.Mesh(shieldGeo, shieldMat);
+    shield2.rotation.x = Math.PI / 2;
+    shield2.rotation.z = Math.PI * 0.8;
+    shieldGroup.add(shield2);
+
+    group.add(shieldGroup);
+
+    // Billboard health bar above boss
+    const healthBarGroup = new THREE.Group();
+    healthBarGroup.position.set(0, 3.8, 0);
+
+    const bgGeo = new THREE.PlaneGeometry(3.0, 0.25);
+    const bgMat = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.DoubleSide });
+    const bgMesh = new THREE.Mesh(bgGeo, bgMat);
+    healthBarGroup.add(bgMesh);
+
+    const fgGeo = new THREE.PlaneGeometry(3.0, 0.25);
+    const fgMat = new THREE.MeshBasicMaterial({ color: 0xff0066, side: THREE.DoubleSide });
+    const fgMesh = new THREE.Mesh(fgGeo, fgMat);
+    fgMesh.position.z = 0.01;
+    healthBarGroup.add(fgMesh);
+
+    // 3D health text canvas
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width = 128;
+    textCanvas.height = 48;
+    const textCtx = textCanvas.getContext('2d');
+    textCtx.font = 'bold 24px "Courier New", monospace';
+    textCtx.fillStyle = '#ffffff';
+    textCtx.textAlign = 'center';
+    textCtx.textBaseline = 'middle';
+    textCtx.fillText('100%', 64, 24);
+
+    const textTexture = new THREE.CanvasTexture(textCanvas);
+    const textMat = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true, side: THREE.DoubleSide });
+    const textGeo = new THREE.PlaneGeometry(1.2, 0.45);
+    const textMesh = new THREE.Mesh(textGeo, textMat);
+    textMesh.position.set(2.2, 0, 0.01);
+    healthBarGroup.add(textMesh);
+
+    group.add(healthBarGroup);
+
+    this.scene.add(group);
+
+    this.bossOverseer = {
+      mesh: group,
+      coreMesh,
+      outerMesh,
+      shieldMesh: shieldGroup,
+      health: 6,
+      maxHealth: 6,
+      healthBarGroup,
+      healthBarFg: fgMesh,
+      healthTextCanvas: textCanvas,
+      healthTextCtx: textCtx,
+      healthTextTexture: textTexture,
+      projectiles: [],
+      shootCooldown: 1.8,
+      shieldSpeed: 2.0,
+      damageIntensity: 0.0
+    };
+  }
+
   // Ammo coordinate layouts for Sectors 1-6
   spawnAmmoPacks(levelNumber) {
     if (levelNumber === 1) {
@@ -962,6 +1443,26 @@ export class GameWorld {
       this.createAmmoMesh(-8, 8.2, 3, 'ammo_6_4');
       this.createAmmoMesh(8, 8.2, 3, 'ammo_6_5');
       this.createAmmoMesh(0, 10.2, -10, 'ammo_6_6');
+    } else if (levelNumber === 7) {
+      this.createAmmoMesh(0, 5.2, 26, 'ammo_7_1');
+      this.createAmmoMesh(-18, 7.2, 10, 'ammo_7_2');
+      this.createAmmoMesh(18, 9.2, -10, 'ammo_7_3');
+      this.createAmmoMesh(0, 12.2, -32, 'ammo_7_4');
+      this.createAmmoMesh(0, 1.2, 0, 'ammo_7_5');
+    } else if (levelNumber === 8) {
+      this.createAmmoMesh(0, 4.2, 26, 'ammo_8_1');
+      this.createAmmoMesh(-15, 5.2, 10, 'ammo_8_2');
+      this.createAmmoMesh(0, 23.2, 0, 'ammo_8_3');
+      this.createAmmoMesh(15, 13.2, -10, 'ammo_8_4');
+      this.createAmmoMesh(0, 15.2, -28, 'ammo_8_5');
+      this.createAmmoMesh(0, 1.2, -10, 'ammo_8_6');
+    } else if (levelNumber === 9) {
+      this.createAmmoMesh(0, 5.2, 30, 'ammo_9_1');
+      this.createAmmoMesh(0, 11.2, -18, 'ammo_9_2');
+      this.createAmmoMesh(0, 11.2, -30, 'ammo_9_3');
+      this.createAmmoMesh(-6, 11.2, -30, 'ammo_9_4');
+      this.createAmmoMesh(6, 11.2, -30, 'ammo_9_5');
+      this.createAmmoMesh(0, 1.2, 0, 'ammo_9_6');
     }
   }
 
@@ -1317,6 +1818,43 @@ export class GameWorld {
         }
       }
     });
+
+    // 10. Update Sector 7 Switches
+    this.switches.forEach(s => {
+      s.switchMesh.rotation.y += 0.8 * delta;
+    });
+
+    // 11. Update Sector 8 Gravity Inversion Field Particles
+    this.gravityFields.forEach(f => {
+      f.particles.forEach(p => {
+        p.mesh.position.y += p.speed * delta;
+        if (p.mesh.position.y > p.endY) {
+          p.mesh.position.y = p.startY;
+        }
+      });
+    });
+
+    // 12. Update Sector 9 Boss Overseer
+    if (this.bossOverseer) {
+      const boss = this.bossOverseer;
+      boss.coreMesh.rotation.y += 1.2 * delta;
+      boss.coreMesh.rotation.x += 0.6 * delta;
+      boss.outerMesh.rotation.y -= 0.5 * delta;
+      boss.outerMesh.rotation.z += 0.3 * delta;
+
+      boss.shieldMesh.rotation.y += boss.shieldSpeed * delta;
+
+      if (boss.damageIntensity > 0) {
+        boss.damageIntensity -= 8.0 * delta;
+        boss.coreMesh.material.emissiveIntensity = 1.8 + Math.max(0, boss.damageIntensity) * 4.2;
+        const wobble = 1.0 + Math.sin(time * 60.0) * 0.08 * boss.damageIntensity;
+        const squash = 1.0 - Math.sin(time * 60.0) * 0.08 * boss.damageIntensity;
+        boss.mesh.scale.set(wobble, squash, wobble);
+      } else {
+        boss.mesh.scale.set(1.0, 1.0, 1.0);
+        boss.coreMesh.material.emissiveIntensity = 1.8;
+      }
+    }
   }
 
   removeCrystal(crystalId) {
@@ -1544,17 +2082,17 @@ export class GameWorld {
       this.createCrystalMesh(pos.x, 1.2, pos.z, `crystal_5_f_${idx}`);
     });
 
-    this.createCrystalMesh(-20, 7.2, -20, 'crystal_5_p1_a');
-    this.createCrystalMesh(-18, 7.2, -22, 'crystal_5_p1_b');
+    this.createCrystalMesh(-18, 7.2, -18, 'crystal_5_p1_a');
+    this.createCrystalMesh(-16, 7.2, -20, 'crystal_5_p1_b');
 
-    this.createCrystalMesh(20, 7.2, -20, 'crystal_5_p2_a');
-    this.createCrystalMesh(18, 7.2, -22, 'crystal_5_p2_b');
+    this.createCrystalMesh(18, 7.2, -18, 'crystal_5_p2_a');
+    this.createCrystalMesh(16, 7.2, -20, 'crystal_5_p2_b');
 
-    this.createCrystalMesh(-20, 12.2, 20, 'crystal_5_p3_a');
-    this.createCrystalMesh(-22, 12.2, 18, 'crystal_5_p3_b');
+    this.createCrystalMesh(-18, 12.2, 18, 'crystal_5_p3_a');
+    this.createCrystalMesh(-20, 12.2, 16, 'crystal_5_p3_b');
 
-    this.createCrystalMesh(20, 12.2, 20, 'crystal_5_p4_a');
-    this.createCrystalMesh(22, 12.2, 18, 'crystal_5_p4_b');
+    this.createCrystalMesh(18, 12.2, 18, 'crystal_5_p4_a');
+    this.createCrystalMesh(20, 12.2, 16, 'crystal_5_p4_b');
   }
 
   spawnCrystalsLevel6() {
@@ -1576,6 +2114,60 @@ export class GameWorld {
     this.createCrystalMesh(0, 1.2, 5, 'crystal_6_low_1');
     this.createCrystalMesh(0, 1.2, -5, 'crystal_6_low_2');
     this.createCrystalMesh(-5, 1.2, 0, 'crystal_6_low_3');
+  }
+
+  spawnCrystalsLevel7() {
+    this.createCrystalMesh(0, 5.2, 26, 'crystal_7_spawn_a');
+    this.createCrystalMesh(-3, 5.2, 26, 'crystal_7_spawn_b');
+    this.createCrystalMesh(3, 5.2, 26, 'crystal_7_spawn_c');
+    this.createCrystalMesh(-18, 7.2, 10, 'crystal_7_sw1_a');
+    this.createCrystalMesh(-18, 7.2, 12, 'crystal_7_sw1_b');
+    this.createCrystalMesh(18, 9.2, -10, 'crystal_7_sw2_a');
+    this.createCrystalMesh(18, 9.2, -8, 'crystal_7_sw2_b');
+    this.createCrystalMesh(0, 8.2, 0, 'crystal_7_ph1_a');
+    this.createCrystalMesh(-2, 8.2, 0, 'crystal_7_ph1_b');
+    this.createCrystalMesh(2, 8.2, 0, 'crystal_7_ph1_c');
+    this.createCrystalMesh(0, 10.2, -20, 'crystal_7_ph2_a');
+    this.createCrystalMesh(-2, 10.2, -20, 'crystal_7_ph2_b');
+    this.createCrystalMesh(2, 10.2, -20, 'crystal_7_ph2_c');
+    this.createCrystalMesh(0, 12.2, -32, 'crystal_7_target_a');
+    this.createCrystalMesh(0, 12.2, -30, 'crystal_7_target_b');
+  }
+
+  spawnCrystalsLevel8() {
+    this.createCrystalMesh(0, 4.2, 26, 'crystal_8_spawn_a');
+    this.createCrystalMesh(-15, 5.2, 10, 'crystal_8_p1_a');
+    this.createCrystalMesh(-15, 5.2, 12, 'crystal_8_p1_b');
+    this.createCrystalMesh(-15, 5.2, 8, 'crystal_8_p1_c');
+    this.createCrystalMesh(0, 23.2, 0, 'crystal_8_ceil_a');
+    this.createCrystalMesh(-3, 23.2, 0, 'crystal_8_ceil_b');
+    this.createCrystalMesh(3, 23.2, 0, 'crystal_8_ceil_c');
+    this.createCrystalMesh(0, 23.2, -3, 'crystal_8_ceil_d');
+    this.createCrystalMesh(0, 23.2, 3, 'crystal_8_ceil_e');
+    this.createCrystalMesh(15, 13.2, -10, 'crystal_8_mid_a');
+    this.createCrystalMesh(15, 13.2, -12, 'crystal_8_mid_b');
+    this.createCrystalMesh(15, 13.2, -8, 'crystal_8_mid_c');
+    this.createCrystalMesh(0, 15.2, -28, 'crystal_8_target_a');
+    this.createCrystalMesh(-3, 15.2, -28, 'crystal_8_target_b');
+    this.createCrystalMesh(3, 15.2, -28, 'crystal_8_target_c');
+  }
+
+  spawnCrystalsLevel9() {
+    this.createCrystalMesh(0, 5.2, 30, 'crystal_9_spawn_a');
+    this.createCrystalMesh(0, 5.2, 32, 'crystal_9_spawn_b');
+    this.createCrystalMesh(0, 7.2, 18, 'crystal_9_ring_a');
+    this.createCrystalMesh(0, 9.2, 6, 'crystal_9_ring_b');
+    this.createCrystalMesh(0, 11.2, -6, 'crystal_9_ring_c');
+    this.createCrystalMesh(0, 11.2, -30, 'crystal_9_boss_center');
+    this.createCrystalMesh(-6, 11.2, -30, 'crystal_9_boss_l');
+    this.createCrystalMesh(6, 11.2, -30, 'crystal_9_boss_r');
+    this.createCrystalMesh(0, 11.2, -24, 'crystal_9_boss_f');
+    this.createCrystalMesh(0, 11.2, -36, 'crystal_9_boss_b');
+    this.createCrystalMesh(-6, 11.2, -36, 'crystal_9_boss_bl');
+    this.createCrystalMesh(6, 11.2, -36, 'crystal_9_boss_br');
+    this.createCrystalMesh(-6, 11.2, -24, 'crystal_9_boss_fl');
+    this.createCrystalMesh(6, 11.2, -24, 'crystal_9_boss_fr');
+    this.createCrystalMesh(0, 11.2, -39, 'crystal_9_boss_back');
   }
 
   // Collections accessors
@@ -1621,5 +2213,29 @@ export class GameWorld {
 
   getAmmoPacks() {
     return this.ammoPacks;
+  }
+
+  getSwitches() {
+    return this.switches;
+  }
+
+  getPhasePlatforms() {
+    return this.phasePlatforms;
+  }
+
+  getGravityFields() {
+    return this.gravityFields;
+  }
+
+  getBarriers() {
+    return this.barriers;
+  }
+
+  getBoostRings() {
+    return this.boostRings;
+  }
+
+  getBossOverseer() {
+    return this.bossOverseer;
   }
 }

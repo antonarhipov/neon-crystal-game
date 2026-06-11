@@ -701,5 +701,105 @@ export class AudioManager {
     osc1.stop(t + 0.65);
     osc2.stop(t + 0.65);
   }
+
+  playGlitchDecoySound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.linearRampToValueAtTime(120, t + 0.15);
+
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.16);
+  }
+
+  playGravityInvertSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t + 0.35);
+
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.4);
+  }
+
+  playBarrierBreakSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(350, t);
+    osc1.frequency.linearRampToValueAtTime(60, t + 0.4);
+
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(520, t);
+    osc2.frequency.linearRampToValueAtTime(80, t + 0.25);
+
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc1.start(t);
+    osc2.start(t);
+    osc1.stop(t + 0.45);
+    osc2.stop(t + 0.45);
+  }
+
+  playBossHomingSound() {
+    this.init();
+    this.resume();
+    if (this.isMuted) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.setValueAtTime(740, t + 0.08);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.18);
+  }
 }
 

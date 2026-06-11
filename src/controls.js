@@ -26,6 +26,8 @@ export class PlayerControls {
     this.jumpStrength = 14.0;
     this.friction = 8.0;
 
+    this.spawnPoint = new THREE.Vector3(0, this.playerHeight, 0);
+
     // Set initial position
     this.resetPosition();
 
@@ -37,9 +39,13 @@ export class PlayerControls {
     window.addEventListener('keyup', this.onKeyUp);
   }
 
+  setSpawnPoint(x, y, z) {
+    this.spawnPoint.set(x, y, z);
+  }
+
   resetPosition() {
-    this.camera.position.set(0, this.playerHeight, 0);
-    this.camera.lookAt(0, this.playerHeight, -10);
+    this.camera.position.copy(this.spawnPoint);
+    this.camera.lookAt(this.spawnPoint.x, this.spawnPoint.y, this.spawnPoint.z - 10);
     this.velocity.set(0, 0, 0);
     this.jumpCount = 0;
   }

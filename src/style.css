@@ -520,3 +520,20 @@ body, html {
   background: linear-gradient(to bottom, rgba(0, 240, 255, 0) 0%, #00f0ff 50%, rgba(0, 240, 255, 0) 100%);
 }
 
+/* Purple HUD vignette for gravity fields */
+.gravity-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-shadow: inset 0 0 80px rgba(189, 0, 255, 0.45);
+  z-index: 5;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+.gravity-vignette.active {
+  opacity: 1;
+}
+
