@@ -837,6 +837,7 @@ export class GameWorld {
 
     const platform = {
       mesh,
+      edgeLines,
       minX: x - width / 2,
       maxX: x + width / 2,
       minZ: z - depth / 2,

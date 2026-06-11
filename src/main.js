@@ -1007,18 +1007,21 @@ class GameApp {
               
               // Toggle matching phase platforms
               const platforms = this.world.getPlatforms();
-              const p = platforms.find(plat => plat.isPhasePlatform && plat.phaseId === sw.targetId);
-              if (p) {
-                p.isActive = true;
-                p.mesh.visible = true;
-                p.edgeLines.material.color.setHex(p.originalColor);
-                // restore collision parameters
-                p.minX = p.mesh.position.x - p.width / 2;
-                p.maxX = p.mesh.position.x + p.width / 2;
-                p.minZ = p.mesh.position.z - p.depth / 2;
-                p.maxZ = p.mesh.position.z + p.depth / 2;
-                this.particles.spawn(p.mesh.position, p.originalColor, 20);
-              }
+              platforms.forEach(p => {
+                if (p.isPhasePlatform && p.phaseId === sw.targetId) {
+                  p.isActive = true;
+                  p.mesh.visible = true;
+                  if (p.edgeLines && p.edgeLines.material) {
+                    p.edgeLines.material.color.setHex(p.originalColor);
+                  }
+                  // restore collision parameters
+                  p.minX = p.mesh.position.x - p.width / 2;
+                  p.maxX = p.mesh.position.x + p.width / 2;
+                  p.minZ = p.mesh.position.z - p.depth / 2;
+                  p.maxZ = p.mesh.position.z + p.depth / 2;
+                  this.particles.spawn(p.mesh.position, p.originalColor, 20);
+                }
+              });
               hit = true;
               break;
             }
@@ -1162,14 +1165,18 @@ class GameApp {
       }
 
       if (this.portalCooldown <= 0) {
+        const feetPos = playerPos.clone();
+        feetPos.y -= this.controls.playerHeight;
+        
         for (const portal of portals) {
-          const dist = playerPos.distanceTo(portal.position);
-          if (dist < 1.4) {
+          const dist = feetPos.distanceTo(portal.position);
+          if (dist < 1.6) {
             const targetPortal = portals.find(p => p.id === portal.targetPortalId);
             if (targetPortal) {
-              // Teleport player
-              this.camera.position.copy(targetPortal.position);
-              this.camera.position.y += 0.5; // Landing clearance height
+              // Teleport player (camera represents head position)
+              const newPos = targetPortal.position.clone();
+              newPos.y += this.controls.playerHeight - 0.1;
+              this.camera.position.copy(newPos);
               
               // Clear velocities to avoid sliding off
               this.controls.velocity.set(0, 0, 0);
