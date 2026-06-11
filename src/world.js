@@ -180,18 +180,26 @@ export class GameWorld {
       this.createPlatform(15, 8, 0, 11, 0.8, 11, 0xff00b4);      // Platform C (Right mid)
       this.createPlatform(0, 11, -14, 14, 0.8, 14, 0x00f0ff);    // Platform D (High center back)
 
+      // Stepping stones for smooth reachability of Mid Left/Right platforms
+      this.createPlatform(-7.5, 6, 7, 4, 0.4, 4, 0x00f0ff);      // Step Stone Left (A -> B)
+      this.createPlatform(7.5, 6, 7, 4, 0.4, 4, 0x00f0ff);       // Step Stone Right (A -> C)
+
       // Moving Platforms
       // Moving Plat 1: Vertically between y=0 and y=4 at (x=-8, z=14)
       this.createPlatform(-8, 0, 14, 6, 0.4, 6, 0xffee00, {
         targetX: -8, targetY: 4, targetZ: 14, speed: 1.5
       });
-      // Moving Plat 2: Diagonal/Horizontal at y=8 between Plat B and D
+      // Moving Plat 2: Diagonal/Horizontal at y=8 between Plat B and D (Left side)
       this.createPlatform(-12, 8, -6, 6, 0.4, 6, 0xffee00, {
         targetX: -5, targetY: 9.5, targetZ: -12, speed: 1.2
       });
       // Moving Plat 3: Vertically between y=4 and y=11 at (x=8, z=-14)
       this.createPlatform(8, 4, -14, 6, 0.4, 6, 0xffee00, {
         targetX: 8, targetY: 11, targetZ: -14, speed: 1.6
+      });
+      // Moving Plat 4: Diagonal/Horizontal at y=8 between Plat C and D (Right side)
+      this.createPlatform(12, 8, -6, 6, 0.4, 6, 0xffee00, {
+        targetX: 5, targetY: 9.5, targetZ: -12, speed: 1.2
       });
 
       // Cyclic lasers (crossing barriers on floor)
@@ -583,18 +591,25 @@ export class GameWorld {
     };
 
     if (levelNumber === 2) {
-      // Guide 1: Floor -> Elevator 1 -> Plat A
-      createDashLine(new THREE.Vector3(-8, 0.1, 14), new THREE.Vector3(-8, 4.1, 14), 0xffee00); // Vertical rise
+      // Guide 1: Floor -> Elevator 1 (Left Front) -> Plat A
+      createDashLine(new THREE.Vector3(-8, 0.1, 14), new THREE.Vector3(-8, 4.1, 14), 0xffee00); // Elevator Rise
       createDashLine(new THREE.Vector3(-8, 4.1, 14), new THREE.Vector3(0, 4.1, 14), 0x00f0ff);  // Leap to Plat A
 
-      // Guide 2: Plat B -> Elevator 2 -> Plat D
+      // Guide 2: Floor -> Elevator 3 (Right Back) -> Plat D
+      createDashLine(new THREE.Vector3(8, 0.1, -14), new THREE.Vector3(8, 11.1, -14), 0xffee00); // Elevator Rise
+      createDashLine(new THREE.Vector3(8, 11.1, -14), new THREE.Vector3(0, 11.1, -14), 0x00f0ff); // Leap to Plat D
+
+      // Guide 3: Left Wing Loop (Plat A <-> Step B <-> Plat B <-> Moving 2 <-> Plat D)
+      createDashLine(new THREE.Vector3(0, 4.1, 14), new THREE.Vector3(-7.5, 6.1, 7), 0x00f0ff);
+      createDashLine(new THREE.Vector3(-7.5, 6.1, 7), new THREE.Vector3(-15, 8.1, 0), 0xff00b4);
       createDashLine(new THREE.Vector3(-15, 8.1, 0), new THREE.Vector3(-12, 8.1, -6), 0xff00b4);
       createDashLine(new THREE.Vector3(-5, 9.6, -12), new THREE.Vector3(0, 11.1, -14), 0x00f0ff);
 
-      // Guide 3: Plat C -> Elevator 3 -> Plat D
-      createDashLine(new THREE.Vector3(15, 8.1, 0), new THREE.Vector3(8, 4.1, -14), 0xff00b4);
-      createDashLine(new THREE.Vector3(8, 4.1, -14), new THREE.Vector3(8, 11.1, -14), 0xffee00);
-      createDashLine(new THREE.Vector3(8, 11.1, -14), new THREE.Vector3(0, 11.1, -14), 0x00f0ff);
+      // Guide 4: Right Wing Loop (Plat A <-> Step C <-> Plat C <-> Moving 4 <-> Plat D)
+      createDashLine(new THREE.Vector3(0, 4.1, 14), new THREE.Vector3(7.5, 6.1, 7), 0x00f0ff);
+      createDashLine(new THREE.Vector3(7.5, 6.1, 7), new THREE.Vector3(15, 8.1, 0), 0xff00b4);
+      createDashLine(new THREE.Vector3(15, 8.1, 0), new THREE.Vector3(12, 8.1, -6), 0xff00b4);
+      createDashLine(new THREE.Vector3(5, 9.6, -12), new THREE.Vector3(0, 11.1, -14), 0x00f0ff);
 
     } else if (levelNumber === 3) {
       // Guide Arc 1: Portal A Magenta Route
@@ -1606,7 +1621,7 @@ export class GameWorld {
     this.createCrystalMesh(3, 12.2, -14, 'crystal_pD2');
 
     // Crystal floating on Moving Platform 2
-    this.createCrystalMesh(-12, 9.2, -6, 'crystal_moving_p2', 4); // Index 4 is moving platform 2
+    this.createCrystalMesh(-12, 9.2, -6, 'crystal_moving_p2', 7); // Index 7 is moving platform 2
   }
 
   // LEVEL 3: Core spots, portal paths, and central high platform

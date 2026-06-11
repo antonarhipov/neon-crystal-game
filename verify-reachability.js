@@ -79,10 +79,14 @@ const LEVELS = {
       { id: 'platB', minX: -20.5, maxX: -9.5, minY: 8, maxY: 8.8, minZ: -5.5, maxZ: 5.5, y: 8 },
       { id: 'platC', minX: 9.5, maxX: 20.5, minY: 8, maxY: 8.8, minZ: -5.5, maxZ: 5.5, y: 8 },
       { id: 'platD', minX: -7, maxX: 7, minY: 11, maxY: 11.8, minZ: -21, maxZ: -7, y: 11 },
+      // Stepping stones
+      { id: 'stepB', minX: -9.5, maxX: -5.5, minY: 6, maxY: 6.4, minZ: 5, maxZ: 9, y: 6 },
+      { id: 'stepC', minX: 5.5, maxX: 9.5, minY: 6, maxY: 6.4, minZ: 5, maxZ: 9, y: 6 },
       // Moving platforms (represented by their range of motion)
       { id: 'moving1', minX: -11, maxX: -5, minY: 0, maxY: 4.4, minZ: 11, maxZ: 17, y: 4 }, // floor to platA
       { id: 'moving2', minX: -15, maxX: -2, minY: 8, maxY: 9.9, minZ: -15, maxZ: -3, y: 9.5 }, // platB to platD
-      { id: 'moving3', minX: 5, maxX: 11, minY: 4, maxY: 11.4, minZ: -17, maxZ: -11, y: 11 } // floor to platD
+      { id: 'moving3', minX: 5, maxX: 11, minY: 4, maxY: 11.4, minZ: -17, maxZ: -11, y: 11 }, // floor to platD
+      { id: 'moving4', minX: 2, maxX: 15, minY: 8, maxY: 9.9, minZ: -15, maxZ: -3, y: 9.5 } // platC to platD
     ],
     crystals: [
       { id: 'crystal_pA', x: 0, y: 5.2, z: 14 },
