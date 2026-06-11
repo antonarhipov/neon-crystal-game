@@ -203,9 +203,12 @@ const LEVELS = {
       { id: 'plat3', minX: -24, maxX: -12, minY: 11, maxY: 11.8, minZ: 12, maxZ: 24, y: 11 },
       { id: 'plat4', minX: 12, maxX: 24, minY: 11, maxY: 11.8, minZ: 12, maxZ: 24, y: 11 },
       { id: 'platCenter', minX: -6, maxX: 6, minY: 14, maxY: 14.8, minZ: -6, maxZ: 6, y: 14 },
-      // Timed rising gates (can stand on them from Y=0 to Y=6)
-      { id: 'gate1', minX: -12.5, maxX: -11.5, minY: 0, maxY: 6.0, minZ: -4, maxZ: 4, y: 6 },
-      { id: 'gate2', minX: 11.5, maxX: 12.5, minY: 0, maxY: 6.0, minZ: -4, maxZ: 4, y: 6 }
+      // Stepping stones
+      { id: 'stepLeft', minX: -14, maxX: -10, minY: 2.5, maxY: 2.9, minZ: 4, maxZ: 8, y: 2.5 },
+      { id: 'stepRight', minX: 10, maxX: 14, minY: 2.5, maxY: 2.9, minZ: 4, maxZ: 8, y: 2.5 },
+      // Timed rising gates (can stand on them from Y=6.0 to Y=12.0)
+      { id: 'gate1', minX: -12.5, maxX: -11.5, minY: 6.0, maxY: 12.0, minZ: -4, maxZ: 4, y: 12 },
+      { id: 'gate2', minX: 11.5, maxX: 12.5, minY: 6.0, maxY: 12.0, minZ: -4, maxZ: 4, y: 12 }
     ],
     portals: [
       { id: 'portal1', targetPortalId: 'portal2', x: -18, y: 6.8, z: -18 },

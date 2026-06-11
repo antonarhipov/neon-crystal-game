@@ -331,6 +331,10 @@ export class GameWorld {
       this.createPlatform(-18, 11, 18, 12, 0.8, 12, 0xff00b4);    // High corner plat 3
       this.createPlatform(18, 11, 18, 12, 0.8, 12, 0xff00b4);     // High corner plat 4
       
+      // Stepping stones to help jump onto the rising timed gate platforms
+      this.createPlatform(-12, 2.5, 6, 4, 0.4, 4, 0x00f0ff);      // Step Stone Left (Floor -> Gate 1)
+      this.createPlatform(12, 2.5, 6, 4, 0.4, 4, 0x00f0ff);       // Step Stone Right (Floor -> Gate 2)
+      
       // Portals
       const p1 = this.createPortal(-18, 6.8, -18, 0xff00b4);
       const p2 = this.createPortal(18, 11.8, 18, 0xff00b4);
@@ -639,9 +643,15 @@ export class GameWorld {
       createArcLine(new THREE.Vector3(-20, 6.8, -20), new THREE.Vector3(20, 11.8, 20), 0xff00b4);
       createArcLine(new THREE.Vector3(20, 6.8, -20), new THREE.Vector3(-20, 11.8, 20), 0x00f0ff);
       
-      // Gate guides
-      createDashLine(new THREE.Vector3(-12, 0.1, 0), new THREE.Vector3(-12, 6.1, 0), 0xffee00);
-      createDashLine(new THREE.Vector3(12, 0.1, 0), new THREE.Vector3(12, 6.1, 0), 0xffee00);
+      // Left wing guide: Floor -> Step Left -> Gate 1 -> Plat 1
+      createDashLine(new THREE.Vector3(-12, 0.1, 6), new THREE.Vector3(-12, 2.6, 6), 0x00f0ff);
+      createDashLine(new THREE.Vector3(-12, 2.6, 6), new THREE.Vector3(-12, 6.1, 0), 0xffee00);
+      createDashLine(new THREE.Vector3(-12, 6.1, 0), new THREE.Vector3(-18, 6.9, -18), 0x00f0ff);
+
+      // Right wing guide: Floor -> Step Right -> Gate 2 -> Plat 2
+      createDashLine(new THREE.Vector3(12, 0.1, 6), new THREE.Vector3(12, 2.6, 6), 0x00f0ff);
+      createDashLine(new THREE.Vector3(12, 2.6, 6), new THREE.Vector3(12, 6.1, 0), 0xffee00);
+      createDashLine(new THREE.Vector3(12, 6.1, 0), new THREE.Vector3(18, 6.9, -18), 0x00f0ff);
     } else if (levelNumber === 6) {
       // Fading step stones progression
       createDashLine(new THREE.Vector3(0, 3.8, 26), new THREE.Vector3(0, 5.8, 14), 0xff00ff);
