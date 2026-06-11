@@ -2,9 +2,11 @@
 
 A 3D first-person browser game built with [Three.js](https://threejs.org/) and [Vite](https://vitejs.dev/). Navigate a neon, cyberpunk-styled grid across nine sectors, collect energy crystals before the core destabilizes, shoot sentinel drones, evade security systems, and chain combos for high scores.
 
-| Desktop Version | Mobile Version (PWA Standalone) |
-|---|---|
-| ![Desktop Screenshot](neon-crystal-screenshot.png) | ![Mobile Screenshot](neon-crystal-mobile.png) |
+### Desktop Version
+![Neon Crystal Collector screenshot](neon-crystal-screenshot.png)
+
+### Mobile Version (PWA Standalone)
+![Neon Crystal Collector mobile screenshot](neon-crystal-mobile.png)
 
 ## Gameplay
 
