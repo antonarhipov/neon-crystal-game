@@ -1090,7 +1090,7 @@ class GameApp {
 
     if (this.gameState === 'PLAYING') {
       // Update timer countdown
-      this.timeLeft = Math.max(0, this.timeLeft - delta);
+      this.timeLeft = Math.max(0, this.timeLeft - delta * 0.5);
       this.timerTextEl.textContent = `${this.timeLeft.toFixed(1)}s`;
       
       const ratio = this.timeLeft / this.gameDuration;
