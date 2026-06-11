@@ -308,12 +308,12 @@ class GameApp {
 
         const touch = e.changedTouches[0];
         this.joystickTouchId = touch.identifier;
-        this.joystickStartX = touch.clientX;
-        this.joystickStartY = touch.clientY;
 
-        this.joystickBase.style.left = `${this.joystickStartX}px`;
-        this.joystickBase.style.top = `${this.joystickStartY}px`;
-        this.joystickBase.style.display = 'block';
+        // Use stationary base center coordinates
+        const rect = this.joystickBase.getBoundingClientRect();
+        this.joystickStartX = rect.left + rect.width / 2;
+        this.joystickStartY = rect.top + rect.height / 2;
+
         this.joystickHandle.style.transform = 'translate(-50%, -50%)';
       }, { passive: false });
 
@@ -369,7 +369,7 @@ class GameApp {
         if (touchEnded) {
           e.preventDefault();
           this.joystickTouchId = null;
-          this.joystickBase.style.display = 'none';
+          this.joystickHandle.style.transform = 'translate(-50%, -50%)';
           this.controls.mobileDirection.set(0, 0, 0);
         }
       };
