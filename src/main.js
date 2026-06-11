@@ -66,6 +66,23 @@ class GameApp {
 
     this.isLevelSelecting = false;
 
+    // Device detection
+    this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (this.isMobile) {
+      document.body.classList.add('is-mobile');
+    }
+
+    // Mobile controls DOM elements
+    this.mobileControls = document.getElementById('mobile-controls');
+    this.joystickZone = document.getElementById('joystick-zone');
+    this.joystickBase = document.getElementById('joystick-base');
+    this.joystickHandle = document.getElementById('joystick-handle');
+    this.mobileShootBtn = document.getElementById('mobile-shoot-btn');
+    this.mobileJumpBtn = document.getElementById('mobile-jump-btn');
+    this.mobileGuideBtn = document.getElementById('mobile-guide-btn');
+    this.mobileMusicBtn = document.getElementById('mobile-music-btn');
+    this.mobileSectorsBtn = document.getElementById('mobile-sectors-btn');
+
     // Radar Elements
     this.radarCanvas = document.getElementById('radar-canvas');
     this.radarCtx = this.radarCanvas.getContext('2d');
@@ -134,6 +151,22 @@ class GameApp {
     createTowerLight(0, -25, 0x00f0ff);
   }
 
+  // Handle mission starting state transitions
+  startGame() {
+    this.startScreen.classList.add('hidden');
+    this.gameoverScreen.classList.add('hidden');
+    this.victoryScreen.classList.add('hidden');
+    this.levelclearScreen.classList.add('hidden');
+    
+    this.audio.init();
+    this.audio.resume();
+    this.audio.startAmbientDrone();
+    
+    if (this.gameState === 'START' || this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY' || this.gameState === 'LEVEL_CLEAR') {
+      this.gameState = 'PLAYING';
+    }
+  }
+
   // Set up custom movement controls
   initControls() {
     this.controls = new PlayerControls(
@@ -155,7 +188,8 @@ class GameApp {
         } else {
           this.audio.playJumpSound();
         }
-      }
+      },
+      this.isMobile
     );
   }
 
@@ -163,19 +197,31 @@ class GameApp {
   bindEvents() {
     // Start button
     this.startBtn.addEventListener('click', () => {
-      this.controls.controls.lock();
+      if (this.isMobile) {
+        this.startGame();
+      } else {
+        this.controls.controls.lock();
+      }
     });
 
     // Restart button
     this.restartBtn.addEventListener('click', () => {
       this.resetGame();
-      this.controls.controls.lock();
+      if (this.isMobile) {
+        this.startGame();
+      } else {
+        this.controls.controls.lock();
+      }
     });
 
     // Play again button
     this.playAgainBtn.addEventListener('click', () => {
       this.resetGame();
-      this.controls.controls.lock();
+      if (this.isMobile) {
+        this.startGame();
+      } else {
+        this.controls.controls.lock();
+      }
     });
 
     // Next Level transition button
@@ -191,22 +237,11 @@ class GameApp {
 
     // Handle PointerLock events
     this.controls.controls.addEventListener('lock', () => {
-      this.startScreen.classList.add('hidden');
-      this.gameoverScreen.classList.add('hidden');
-      this.victoryScreen.classList.add('hidden');
-      this.levelclearScreen.classList.add('hidden');
-      
-      this.audio.init();
-      this.audio.resume();
-      this.audio.startAmbientDrone();
-      
-      if (this.gameState === 'START' || this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY' || this.gameState === 'LEVEL_CLEAR') {
-        this.gameState = 'PLAYING';
-      }
+      this.startGame();
     });
 
     this.controls.controls.addEventListener('unlock', () => {
-      if (this.isLevelSelecting) {
+      if (this.isLevelSelecting || this.isMobile) {
         return;
       }
       if (this.gameState === 'PLAYING') {
@@ -258,6 +293,137 @@ class GameApp {
         this.loadSelectedLevel(level);
       });
     });
+
+    // Mobile touch controls setup
+    if (this.isMobile) {
+      // Joystick Touch ID tracker
+      this.joystickTouchId = null;
+      this.joystickStartX = 0;
+      this.joystickStartY = 0;
+
+      // Joystick touchstart
+      this.joystickZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (this.gameState !== 'PLAYING' || this.joystickTouchId !== null) return;
+
+        const touch = e.changedTouches[0];
+        this.joystickTouchId = touch.identifier;
+        this.joystickStartX = touch.clientX;
+        this.joystickStartY = touch.clientY;
+
+        this.joystickBase.style.left = `${this.joystickStartX}px`;
+        this.joystickBase.style.top = `${this.joystickStartY}px`;
+        this.joystickBase.style.display = 'block';
+        this.joystickHandle.style.transform = 'translate(-50%, -50%)';
+      }, { passive: false });
+
+      // Joystick touchmove
+      this.joystickZone.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (this.gameState !== 'PLAYING' || this.joystickTouchId === null) return;
+
+        let touch = null;
+        for (let i = 0; i < e.touches.length; i++) {
+          if (e.touches[i].identifier === this.joystickTouchId) {
+            touch = e.touches[i];
+            break;
+          }
+        }
+
+        if (touch) {
+          const dx = touch.clientX - this.joystickStartX;
+          const dy = touch.clientY - this.joystickStartY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const maxRadius = 50;
+
+          const angle = Math.atan2(dy, dx);
+          const limitDist = Math.min(dist, maxRadius);
+          const moveX = Math.cos(angle) * limitDist;
+          const moveY = Math.sin(angle) * limitDist;
+
+          this.joystickHandle.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
+
+          // Calculate normalized coordinates
+          const normX = moveX / maxRadius;
+          const normY = moveY / maxRadius;
+
+          // Map to PlayerControls movement vector (x = lateral, z = longitudinal)
+          // Positive z moves player forward, positive x moves player right
+          this.controls.mobileDirection.x = normX;
+          this.controls.mobileDirection.z = -normY;
+        }
+      }, { passive: false });
+
+      // Joystick touchend
+      const handleJoystickEnd = (e) => {
+        if (this.joystickTouchId === null) return;
+
+        let touchEnded = false;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === this.joystickTouchId) {
+            touchEnded = true;
+            break;
+          }
+        }
+
+        if (touchEnded) {
+          e.preventDefault();
+          this.joystickTouchId = null;
+          this.joystickBase.style.display = 'none';
+          this.controls.mobileDirection.set(0, 0, 0);
+        }
+      };
+
+      this.joystickZone.addEventListener('touchend', handleJoystickEnd, { passive: false });
+      this.joystickZone.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
+
+      // Mobile action buttons
+      this.mobileJumpBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (this.gameState === 'PLAYING') {
+          if (this.controls.canJump || this.controls.jumpCount < 2) {
+            const isDoubleJump = this.controls.jumpCount > 0;
+            this.controls.velocity.y = isDoubleJump ? this.controls.jumpStrength * 0.95 : this.controls.jumpStrength;
+            this.controls.jumpCount++;
+            this.controls.canJump = false;
+            if (this.controls.onJump) this.controls.onJump(isDoubleJump);
+          }
+        }
+      }, { passive: false });
+
+      this.mobileShootBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (this.gameState === 'PLAYING' && !this.isLevelSelecting) {
+          this.fireWeapon();
+        }
+      }, { passive: false });
+
+      // Mobile top menu buttons
+      this.mobileGuideBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (this.gameState === 'PLAYING') {
+          const nextVisible = !this.world.guidesVisible;
+          this.world.toggleNavigationGuides(nextVisible);
+          this.showPenaltySplash(nextVisible ? 'HOLOGRAPHIC GUIDES ON' : 'HOLOGRAPHIC GUIDES OFF');
+          this.audio.playGuideToggleSound();
+        }
+      }, { passive: false });
+
+      this.mobileMusicBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const isMuted = this.audio.toggleMusic();
+        this.showScoreSplash(isMuted ? 'BACKGROUND MUSIC MUTED' : 'BACKGROUND MUSIC SYNCED');
+      }, { passive: false });
+
+      this.mobileSectorsBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (this.gameState === 'PLAYING' || this.gameState === 'START') {
+          this.isLevelSelecting = true;
+          this.startScreen.classList.add('hidden');
+          this.levelselectScreen.classList.remove('hidden');
+        }
+      }, { passive: false });
+    }
 
     // Handle resize
     window.addEventListener('resize', () => {

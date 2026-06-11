@@ -97,7 +97,30 @@
       </div>
 
       <!-- Sound Mute Toggle -->
-      <button id="sound-btn" class="sound-toggle-btn" title="Toggle Sound">🔊</button>
+      <button id="sound-btn" class="sound-toggle-btn title-hint" title="Toggle Sound">🔊</button>
+
+      <!-- Mobile HUD Controls Overlay -->
+      <div id="mobile-controls" class="mobile-only">
+        <!-- Dynamic Touch Joystick Zone (Left half) -->
+        <div id="joystick-zone">
+          <div id="joystick-base">
+            <div id="joystick-handle"></div>
+          </div>
+        </div>
+
+        <!-- Action Buttons (Right half) -->
+        <div id="mobile-actions">
+          <button id="mobile-shoot-btn" class="mobile-action-btn shoot-glow">SHOOT</button>
+          <button id="mobile-jump-btn" class="mobile-action-btn jump-glow">JUMP</button>
+        </div>
+
+        <!-- Top Menu controls for mobile -->
+        <div id="mobile-menu">
+          <button id="mobile-guide-btn" class="mobile-menu-btn">🗺️ Guide</button>
+          <button id="mobile-music-btn" class="mobile-menu-btn">🎵 Music</button>
+          <button id="mobile-sectors-btn" class="mobile-menu-btn">📂 Sectors</button>
+        </div>
+      </div>
     </div>
 
     <!-- Screen overlays -->
@@ -111,7 +134,8 @@
           Navigate a futuristic cyber platform to collect floating energy crystals. Charge the grid core before energy levels deplete to zero. Beware the infinite outer space abyss!
         </p>
         
-        <div class="instructions-grid">
+        <!-- Desktop Instructions -->
+        <div class="instructions-grid desktop-only">
           <div class="instruction-item">
             <div class="instruction-icon">
               <span class="key-icon">W</span><span class="key-icon">A</span><span class="key-icon">S</span><span class="key-icon">D</span>
@@ -129,6 +153,34 @@
               <span class="key-icon">H</span>
             </div>
             <span><strong>H Key</strong> to toggle holographic guide lines</span>
+          </div>
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span style="color: var(--neon-magenta); font-weight: bold; font-size: 1.2rem;">💎</span>
+            </div>
+            <span>Collect crystals to sync sectors</span>
+          </div>
+        </div>
+
+        <!-- Mobile Instructions -->
+        <div class="instructions-grid mobile-only">
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span class="key-icon" style="padding: 4px 8px; font-size: 0.75rem;">DRAG L</span>
+            </div>
+            <span><strong>Left Screen Drag</strong> to move</span>
+          </div>
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span class="key-icon" style="padding: 4px 8px; font-size: 0.75rem;">DRAG R</span>
+            </div>
+            <span><strong>Right Screen Drag</strong> to look</span>
+          </div>
+          <div class="instruction-item">
+            <div class="instruction-icon">
+              <span class="key-icon" style="padding: 4px 8px; font-size: 0.75rem;">TAP BTN</span>
+            </div>
+            <span><strong>JUMP / SHOOT</strong> buttons to act</span>
           </div>
           <div class="instruction-item">
             <div class="instruction-icon">

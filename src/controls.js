@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
 export class PlayerControls {
-  constructor(camera, domElement, onFallOffMap, onJump) {
+  constructor(camera, domElement, onFallOffMap, onJump, isMobile = false) {
     this.camera = camera;
     this.controls = new PointerLockControls(camera, domElement);
     this.onFallOffMap = onFallOffMap;
     this.onJump = onJump;
+    this.isMobile = isMobile;
 
     // Movement states
     this.moveForward = false;
@@ -15,6 +16,13 @@ export class PlayerControls {
     this.moveRight = false;
     this.canJump = false;
     this.jumpCount = 0;
+
+    // Mobile specific input states
+    this.lookTouchId = null;
+    this.lastTouchX = 0;
+    this.lastTouchY = 0;
+    this.lookSensitivity = 0.004;
+    this.mobileDirection = new THREE.Vector3();
 
     // Physics parameters
     this.velocity = new THREE.Vector3();
@@ -35,9 +43,78 @@ export class PlayerControls {
     // Bind event handlers
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
+    this.onTouchStart = this.onTouchStart.bind(this);
+    this.onTouchMove = this.onTouchMove.bind(this);
+    this.onTouchEnd = this.onTouchEnd.bind(this);
     
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+
+    if (this.isMobile) {
+      window.addEventListener('touchstart', this.onTouchStart, { passive: false });
+      window.addEventListener('touchmove', this.onTouchMove, { passive: false });
+      window.addEventListener('touchend', this.onTouchEnd, { passive: false });
+      window.addEventListener('touchcancel', this.onTouchEnd, { passive: false });
+    }
+  }
+
+  onTouchStart(event) {
+    if (this.lookTouchId !== null) return;
+    
+    // Find a touch that is on the right half of the screen and not starting on an interactive element
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const touch = event.changedTouches[i];
+      if (touch.clientX >= window.innerWidth / 2) {
+        const targetTagName = touch.target.tagName;
+        if (targetTagName === 'BUTTON' || targetTagName === 'INPUT' || touch.target.closest('#mobile-actions')) {
+          continue; // Ignore touches on action buttons
+        }
+        this.lookTouchId = touch.identifier;
+        this.lastTouchX = touch.clientX;
+        this.lastTouchY = touch.clientY;
+        break;
+      }
+    }
+  }
+
+  onTouchMove(event) {
+    if (this.lookTouchId === null) return;
+
+    let lookTouch = null;
+    for (let i = 0; i < event.touches.length; i++) {
+      if (event.touches[i].identifier === this.lookTouchId) {
+        lookTouch = event.touches[i];
+        break;
+      }
+    }
+
+    if (lookTouch) {
+      const deltaX = lookTouch.clientX - this.lastTouchX;
+      const deltaY = lookTouch.clientY - this.lastTouchY;
+      
+      this.lastTouchX = lookTouch.clientX;
+      this.lastTouchY = lookTouch.clientY;
+
+      const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+      euler.setFromQuaternion(this.camera.quaternion);
+      euler.y -= deltaX * this.lookSensitivity;
+      euler.x -= deltaY * this.lookSensitivity;
+      
+      const limit = Math.PI / 2 - 0.05;
+      euler.x = Math.max(-limit, Math.min(limit, euler.x));
+      this.camera.quaternion.setFromEuler(euler);
+    }
+  }
+
+  onTouchEnd(event) {
+    if (this.lookTouchId === null) return;
+    
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      if (event.changedTouches[i].identifier === this.lookTouchId) {
+        this.lookTouchId = null;
+        break;
+      }
+    }
   }
 
   setSpawnPoint(x, y, z) {
@@ -106,7 +183,7 @@ export class PlayerControls {
   }
 
   update(delta, colliders = [], platforms = []) {
-    if (!this.controls.isLocked) return;
+    if (!this.isMobile && !this.controls.isLocked) return;
 
     // Apply friction (damping) - lower damping only when boosted to allow boost momentum to carry player
     const currentFriction = this.isBoosted ? 0.8 : this.friction;
@@ -117,16 +194,28 @@ export class PlayerControls {
     this.velocity.y -= this.gravity * delta;
 
     // Calculate movement direction
-    this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
-    this.direction.x = Number(this.moveRight) - Number(this.moveLeft);
-    this.direction.normalize(); // Ensure diagonal movement isn't faster
+    if (this.isMobile) {
+      this.direction.copy(this.mobileDirection);
+      // mobileDirection is pre-calculated relative to current camera heading
+    } else {
+      this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
+      this.direction.x = Number(this.moveRight) - Number(this.moveLeft);
+      this.direction.normalize(); // Ensure diagonal movement isn't faster
+    }
 
     // Apply acceleration
-    if (this.moveForward || this.moveBackward) {
-      this.velocity.z -= this.direction.z * this.speedMultiplier * delta;
-    }
-    if (this.moveLeft || this.moveRight) {
-      this.velocity.x -= this.direction.x * this.speedMultiplier * delta;
+    if (this.isMobile) {
+      if (this.direction.lengthSq() > 0.001) {
+        this.velocity.z -= this.direction.z * this.speedMultiplier * delta;
+        this.velocity.x -= this.direction.x * this.speedMultiplier * delta;
+      }
+    } else {
+      if (this.moveForward || this.moveBackward) {
+        this.velocity.z -= this.direction.z * this.speedMultiplier * delta;
+      }
+      if (this.moveLeft || this.moveRight) {
+        this.velocity.x -= this.direction.x * this.speedMultiplier * delta;
+      }
     }
 
     // Move player using PointerLockControls (which automatically projects vectors to XZ plane)
@@ -224,6 +313,12 @@ export class PlayerControls {
   destroy() {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    if (this.isMobile) {
+      window.removeEventListener('touchstart', this.onTouchStart);
+      window.removeEventListener('touchmove', this.onTouchMove);
+      window.removeEventListener('touchend', this.onTouchEnd);
+      window.removeEventListener('touchcancel', this.onTouchEnd);
+    }
     this.controls.dispose();
   }
 }
